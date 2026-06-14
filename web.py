@@ -100,9 +100,12 @@ def api_library():
     albums = []
     if src.is_dir():
         for d in sorted(src.iterdir()):
-            if not d.is_dir():
+            if not d.is_dir() or d.name.startswith('.'):
                 continue
-            tracks = sum(1 for f in d.iterdir() if f.suffix.lower() in audio_exts)
+            try:
+                tracks = sum(1 for f in d.iterdir() if f.suffix.lower() in audio_exts)
+            except PermissionError:
+                continue
             if tracks == 0:
                 continue
             parts = d.name.split(' - ', 1)
@@ -166,4 +169,4 @@ def stream():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, threaded=True)
+    app.run(host="0.0.0.0", port=5001, threaded=True)
