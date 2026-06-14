@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 import csv, json, os, queue, re, subprocess, threading
+from datetime import datetime
 from pathlib import Path
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 
 SCRIPT_DIR = Path(__file__).parent
 CONFIG_PATH = SCRIPT_DIR / "config.toml"
 WATCHLIST_PATH = SCRIPT_DIR / "watchlist.csv"
+LOGS_DIR = SCRIPT_DIR / "logs"
 AUDIO_EXTS = {'.mp3', '.flac', '.opus', '.ogg', '.m4a'}
 CSV_FIELDS = ['entry', 'tmp_path', 'status', 'verified']
+LOGS_DIR.mkdir(exist_ok=True)
 
 app = Flask(__name__)
 _proc = None
@@ -241,27 +244,49 @@ def _start_script(name):
         while not _output_queue.empty():
             try: _output_queue.get_nowait()
             except queue.Empty: break
+        ts = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+        log_path = LOGS_DIR / f"{name}-{ts}.log"
         _proc = subprocess.Popen(
             ["bash", str(SCRIPT_DIR / f"{name}.sh")],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, bufsize=1, cwd=str(SCRIPT_DIR),
         )
         _proc_name = name
-        def _reader(p=_proc):
-            for line in iter(p.stdout.readline, ''):
-                _output_queue.put(re.sub(r'(\x1b\[[0-9;]*[a-zA-Z]|\r)', '', line.rstrip()))
+        def _reader(p=_proc, lp=log_path):
+            with open(lp, 'w') as lf:
+                lf.write(f"# {name} — {datetime.now().isoformat()}\n")
+                for line in iter(p.stdout.readline, ''):
+                    clean = re.sub(r'(\x1b\[[0-9;]*[a-zA-Z]|\r)', '', line.rstrip())
+                    lf.write(clean + '\n')
+                    lf.flush()
+                    _output_queue.put(clean)
             _output_queue.put(None)
         threading.Thread(target=_reader, daemon=True).start()
     return True
 
-@app.route("/api/sync",     methods=["POST"])
-def api_sync():     return (jsonify({"ok": True}) if _start_script("sync")     else jsonify({"error": "already running"}), 400)
+@app.route("/api/sync", methods=["POST"])
+def api_sync():
+    return jsonify({"ok": True}) if _start_script("sync") else (jsonify({"error": "already running"}), 400)
 
 @app.route("/api/download", methods=["POST"])
-def api_download(): return (jsonify({"ok": True}) if _start_script("download") else jsonify({"error": "already running"}), 400)
+def api_download():
+    return jsonify({"ok": True}) if _start_script("download") else (jsonify({"error": "already running"}), 400)
 
-@app.route("/api/copy",     methods=["POST"])
-def api_copy():     return (jsonify({"ok": True}) if _start_script("copy")     else jsonify({"error": "already running"}), 400)
+@app.route("/api/copy", methods=["POST"])
+def api_copy():
+    return jsonify({"ok": True}) if _start_script("copy") else (jsonify({"error": "already running"}), 400)
+
+@app.route("/api/logs")
+def api_logs():
+    logs = sorted(LOGS_DIR.glob("*.log"), reverse=True)[:20]
+    return jsonify([{"name": l.name, "size": l.stat().st_size} for l in logs])
+
+@app.route("/api/logs/<name>")
+def api_log_file(name):
+    p = LOGS_DIR / name
+    if not p.exists() or p.parent != LOGS_DIR:
+        return jsonify({"error": "not found"}), 404
+    return Response(p.read_text(), mimetype="text/plain")
 
 @app.route("/api/stop", methods=["POST"])
 def api_stop():
