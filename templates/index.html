@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>slsk-auto</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -23,55 +23,84 @@
     body {
       background: var(--bg); color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: 14px; height: 100vh;
+      font-size: 14px; height: 100dvh;
       display: flex; flex-direction: column; overflow: hidden;
+      /* safe areas for notch / dynamic island / home bar */
+      padding-top: env(safe-area-inset-top);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
-    /* Header */
+    /* ── Header ── */
     header {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 18px;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 10px 14px;
       background: var(--surface); border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
     .logo { font-weight: 700; font-size: 15px; letter-spacing: -.3px; color: var(--accent); }
-    .spacer { flex: 1; }
     .badge {
-      display: flex; align-items: center; gap: 6px;
+      display: flex; align-items: center; gap: 5px;
       font-size: 12px; color: var(--muted);
-      padding: 4px 10px; border-radius: 20px; background: var(--surface2);
+      padding: 3px 9px; border-radius: 20px; background: var(--surface2);
     }
-    .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+    .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
     .badge.on .dot { background: var(--green); }
     .badge.on { color: var(--text); }
+    .hdr-spacer { flex: 1; }
+    .hdr-btns { display: flex; gap: 6px; }
     button {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 6px 14px; border-radius: 6px; border: none;
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 6px 12px; border-radius: 6px; border: none;
       font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s;
+      white-space: nowrap;
     }
-    #sync-btn { background: var(--accent); color: #fff; }
-    #sync-btn:hover { background: #6558e0; }
-    #sync-btn:disabled { opacity: .4; pointer-events: none; }
-    #stop-btn { background: var(--surface2); color: var(--red); border: 1px solid var(--border); }
-    #stop-btn:hover { background: rgba(248,113,113,.12); }
-    #stop-btn:disabled { opacity: .3; pointer-events: none; }
+    .btn-dl   { background: var(--accent); color: #fff; }
+    .btn-dl:hover { background: #6558e0; }
+    .btn-copy { background: var(--surface2); color: var(--blue); border: 1px solid var(--border); }
+    .btn-copy:hover { background: rgba(96,165,250,.12); }
+    .btn-stop { background: var(--surface2); color: var(--red); border: 1px solid var(--border); }
+    .btn-stop:hover { background: rgba(248,113,113,.12); }
+    button:disabled { opacity: .35; pointer-events: none; }
 
-    /* Panels */
-    .panels { display: grid; grid-template-columns: 300px 1fr; flex: 1; overflow: hidden; }
-    .panel { display: flex; flex-direction: column; overflow: hidden; }
-    .panel:first-child { border-right: 1px solid var(--border); }
+    /* ── Tabs ── */
+    .tabs {
+      display: flex; gap: 0;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .tab {
+      padding: 9px 18px;
+      font-size: 13px; font-weight: 600; color: var(--muted);
+      border-bottom: 2px solid transparent;
+      cursor: pointer; transition: color .15s, border-color .15s;
+      user-select: none;
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab:hover:not(.active) { color: var(--text); }
+
+    /* ── Tab pages ── */
+    .page { flex: 1; display: none; overflow: hidden; }
+    .page.active { display: flex; flex-direction: column; }
+
+    /* ── Queue page (two panels side by side) ── */
+    .queue-page { flex-direction: row !important; }
+    .panel { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
+    .panel:first-child { border-right: 1px solid var(--border); max-width: 300px; }
+
     .panel-title {
-      padding: 10px 14px;
+      padding: 9px 14px;
       font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
       color: var(--muted); border-bottom: 1px solid var(--border); flex-shrink: 0;
-      display: flex; align-items: center; gap: 8px;
+      display: flex; align-items: center; gap: 6px;
     }
     .panel-title .spacer { flex: 1; }
-    .refresh-btn {
-      background: none; border: none; color: var(--muted);
-      font-size: 14px; cursor: pointer; padding: 1px 4px; border-radius: 4px; line-height: 1;
+    .icon-btn {
+      background: none; border: none; color: var(--muted); padding: 1px 5px;
+      font-size: 14px; border-radius: 4px; cursor: pointer; line-height: 1;
     }
-    .refresh-btn:hover { color: var(--text); background: var(--surface2); }
+    .icon-btn:hover { color: var(--text); background: var(--surface2); }
 
     /* Queue list */
     #queue-list { flex: 1; overflow-y: auto; }
@@ -79,21 +108,20 @@
     #queue-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
     .group-header {
-      padding: 8px 14px 4px;
+      padding: 8px 14px 3px;
       font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-      color: var(--muted); display: flex; align-items: center; gap: 6px;
+      color: var(--muted); display: flex; align-items: center; gap: 5px;
     }
-    .group-header .count {
+    .group-count {
       background: var(--surface2); padding: 1px 6px; border-radius: 8px;
-      font-size: 10px; color: var(--muted); font-weight: 600;
+      font-size: 10px; font-weight: 600;
     }
-
     .q-item {
       display: flex; align-items: center; gap: 8px;
-      padding: 6px 14px; transition: background .1s; cursor: default;
+      padding: 6px 14px; transition: background .1s;
     }
     .q-item:hover { background: var(--surface2); }
-    .q-status { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; }
+    .q-dot { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; }
     .q-label { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .q-meta { font-size: 11px; color: var(--muted); flex-shrink: 0; }
     .q-del {
@@ -103,13 +131,12 @@
     .q-item:hover .q-del { opacity: 1; }
     .q-del:hover { background: rgba(248,113,113,.15); color: var(--red); }
 
-    /* Status dot colors */
-    .dot-progress { background: var(--blue); box-shadow: 0 0 0 2px rgba(96,165,250,.25); animation: pulse 1.5s infinite; }
-    .dot-pending  { background: var(--muted); }
-    .dot-done     { background: var(--green); }
-    .dot-unverified { background: var(--amber); }
-    .dot-failed   { background: var(--red); }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .dot-progress  { background: var(--blue); box-shadow: 0 0 0 2px rgba(96,165,250,.2); animation: pulse 1.4s infinite; }
+    .dot-pending   { background: var(--muted); }
+    .dot-unverified{ background: var(--amber); }
+    .dot-failed    { background: var(--red); }
+    .dot-verified  { background: var(--green); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
     .q-empty { padding: 14px; color: var(--muted); font-style: italic; font-size: 13px; }
 
@@ -127,7 +154,7 @@
     .add-form button { background: var(--surface2); border: 1px solid var(--border); color: var(--accent); padding: 6px 12px; }
     .add-form button:hover { background: rgba(124,111,247,.15); border-color: var(--accent); }
 
-    /* Log */
+    /* Activity log */
     #log {
       flex: 1; overflow-y: auto; padding: 10px 14px;
       font-family: var(--mono); font-size: 12px; line-height: 1.8;
@@ -144,38 +171,37 @@
     .ll.done { color: var(--green); font-weight: 700; }
     .log-empty { color: var(--muted); font-style: italic; font-size: 13px; font-family: inherit; }
 
-    /* Library */
-    .library {
-      flex-shrink: 0; height: 195px;
-      display: flex; flex-direction: column;
-      border-top: 1px solid var(--border); overflow: hidden;
-    }
-    .lib-header {
-      display: flex; align-items: center; gap: 8px; padding: 9px 14px;
-      font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-      color: var(--muted); flex-shrink: 0;
+    /* ── Library page ── */
+    .lib-page { padding: 14px; overflow-y: auto; flex-wrap: wrap; align-content: flex-start; gap: 10px; }
+    .lib-page::-webkit-scrollbar { width: 4px; }
+    .lib-page::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .lib-toolbar {
+      width: 100%; display: flex; align-items: center; gap: 8px;
+      margin-bottom: 4px; flex-shrink: 0;
     }
     .lib-tag {
       background: var(--surface2); color: var(--text);
-      font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none;
-      padding: 2px 8px; border-radius: 10px;
+      font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px;
     }
-    .lib-count { font-weight: 400; text-transform: none; letter-spacing: 0; }
-    #lib-grid {
-      display: flex; gap: 8px; padding: 0 14px 12px;
-      overflow-x: auto; overflow-y: hidden; flex: 1;
-    }
-    #lib-grid::-webkit-scrollbar { height: 4px; }
-    #lib-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .lib-count { font-size: 12px; color: var(--muted); }
     .alb {
-      flex-shrink: 0; width: 120px;
+      width: calc(33.333% - 7px);
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px; transition: border-color .15s;
+      border-radius: 8px; padding: 10px; transition: border-color .15s; cursor: default;
     }
+    @media (max-width: 500px) { .alb { width: calc(50% - 5px); } }
+    @media (min-width: 900px) { .alb { width: calc(20% - 8px); } }
     .alb:hover { border-color: var(--accent); }
     .alb-artist { font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 3px; }
     .alb-name   { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 6px; }
     .alb-count  { font-size: 10px; color: var(--muted); }
+
+    /* Running indicator in tab bar */
+    .tab-badge {
+      display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--blue); margin-left: 5px; vertical-align: middle;
+      animation: pulse 1.4s infinite;
+    }
   </style>
 </head>
 <body>
@@ -183,17 +209,26 @@
 <header>
   <div class="logo">slsk-auto</div>
   <div id="device-badge" class="badge"><div class="dot"></div><span>checking…</span></div>
-  <div class="spacer"></div>
-  <button id="sync-btn" onclick="startSync()">▶ Sync</button>
-  <button id="stop-btn" onclick="stopSync()" disabled>■ Stop</button>
+  <div class="hdr-spacer"></div>
+  <div class="hdr-btns">
+    <button class="btn-dl"   id="btn-dl"   onclick="run('download')">↓ Download</button>
+    <button class="btn-copy" id="btn-copy" onclick="run('copy')">→ Copy</button>
+    <button class="btn-stop" id="btn-stop" onclick="doStop()" disabled>■ Stop</button>
+  </div>
 </header>
 
-<div class="panels">
+<div class="tabs">
+  <div class="tab active" onclick="showTab('queue')" id="tab-queue">Queue<span id="tab-badge" class="tab-badge" style="display:none"></span></div>
+  <div class="tab"        onclick="showTab('lib')"   id="tab-lib">Library</div>
+</div>
+
+<!-- Queue tab -->
+<div class="page queue-page active" id="page-queue">
   <div class="panel">
     <div class="panel-title">
       Queue
       <div class="spacer"></div>
-      <button class="refresh-btn" onclick="loadQueue()" title="Refresh">↻</button>
+      <button class="icon-btn" onclick="loadQueue()" title="Refresh">↻</button>
     </div>
     <div id="queue-list"></div>
     <form class="add-form" onsubmit="addAlbum(event)">
@@ -201,22 +236,21 @@
       <button type="submit">Add</button>
     </form>
   </div>
-
   <div class="panel">
     <div class="panel-title">Activity</div>
-    <div id="log"><span class="log-empty">Run a sync to see activity.</span></div>
+    <div id="log"><span class="log-empty">Run download or sync to see activity.</span></div>
   </div>
 </div>
 
-<div class="library">
-  <div class="lib-header">
-    Library
+<!-- Library tab -->
+<div class="page lib-page" id="page-lib">
+  <div class="lib-toolbar">
     <span id="lib-source" class="lib-tag"></span>
     <span id="lib-count" class="lib-count"></span>
-    <div class="spacer"></div>
-    <button class="refresh-btn" onclick="loadLibrary()" title="Refresh library">↻</button>
+    <div style="flex:1"></div>
+    <button class="icon-btn" onclick="loadLibrary()" title="Refresh">↻</button>
   </div>
-  <div id="lib-grid"></div>
+  <div id="lib-grid" style="width:100%;display:contents"></div>
 </div>
 
 <script>
@@ -224,7 +258,16 @@
   let es = null;
 
   async function api(path, opts={}) {
-    return fetch(path, { headers: {'Content-Type':'application/json'}, ...opts }).then(r => r.json());
+    return fetch(path, { headers:{'Content-Type':'application/json'}, ...opts }).then(r=>r.json());
+  }
+
+  // ── Tabs ──────────────────────────────────────
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.getElementById('page-' + name).classList.add('active');
+    if (name === 'lib') loadLibrary();
   }
 
   // ── Status ────────────────────────────────────
@@ -236,15 +279,46 @@
       badge.innerHTML = `<div class="dot"></div><span>${esc(s.device_name)}</span>`;
     } else {
       badge.className = 'badge';
-      badge.innerHTML = `<div class="dot"></div><span>device not mounted</span>`;
+      badge.innerHTML = `<div class="dot"></div><span>no device</span>`;
     }
-    setRunning(s.sync_running);
-    if (s.sync_running) loadQueue();
+    setRunning(s.running, s.running_script);
+    if (s.running) loadQueue();
   }
 
-  function setRunning(on) {
-    document.getElementById('sync-btn').disabled = on;
-    document.getElementById('stop-btn').disabled = !on;
+  function setRunning(on, script) {
+    document.getElementById('btn-dl').disabled   = on;
+    document.getElementById('btn-copy').disabled = on;
+    document.getElementById('btn-stop').disabled = !on;
+    const tb = document.getElementById('tab-badge');
+    tb.style.display = on ? 'inline-block' : 'none';
+  }
+
+  // ── Run / Stop ────────────────────────────────
+  async function run(script) {
+    const r = await api(`/api/${script}`, { method:'POST' });
+    if (r.error) { alert(r.error); return; }
+    setRunning(true, script);
+    document.getElementById('log').innerHTML = '';
+    connectStream();
+  }
+
+  async function doStop() {
+    await api('/api/stop', { method:'POST' });
+  }
+
+  function connectStream() {
+    if (es) es.close();
+    es = new EventSource('/stream');
+    es.onmessage = e => {
+      const msg = JSON.parse(e.data);
+      if (msg.t === 'log') appendLog(msg.text);
+      if (msg.t === 'done') {
+        setRunning(false, null);
+        loadQueue();
+        es.close(); es = null;
+      }
+    };
+    es.onerror = () => { setRunning(false, null); es.close(); es = null; };
   }
 
   // ── Queue ─────────────────────────────────────
@@ -252,14 +326,12 @@
     const data = await api('/api/watchlist');
     const el = document.getElementById('queue-list');
     el.innerHTML = '';
-
     const groups = [
-      { key: 'in_progress', label: 'Downloading',  dotClass: 'dot-progress',   showMeta: true },
-      { key: 'not_started', label: 'Pending',       dotClass: 'dot-pending',    showMeta: false },
-      { key: 'completed',   label: 'Downloaded',    dotClass: 'dot-unverified', showMeta: true },
-      { key: 'failed',      label: 'Failed',        dotClass: 'dot-failed',     showMeta: false },
+      { key:'in_progress', label:'Downloading',  dot:'dot-progress',   meta:true  },
+      { key:'not_started', label:'Pending',       dot:'dot-pending',    meta:false },
+      { key:'completed',   label:'Downloaded',    dot:'dot-unverified', meta:true  },
+      { key:'failed',      label:'Failed',        dot:'dot-failed',     meta:false },
     ];
-
     let any = false;
     for (const g of groups) {
       const items = data[g.key] || [];
@@ -267,35 +339,23 @@
       any = true;
       const hdr = document.createElement('div');
       hdr.className = 'group-header';
-      hdr.innerHTML = `${g.label} <span class="count">${items.length}</span>`;
+      hdr.innerHTML = `${g.label}<span class="group-count">${items.length}</span>`;
       el.appendChild(hdr);
-      items.forEach(item => el.appendChild(makeQItem(item, g.dotClass, g.showMeta)));
+      items.forEach(item => el.appendChild(makeItem(item, g.dot, g.meta)));
     }
     if (!any) el.innerHTML = '<div class="q-empty">Nothing queued.</div>';
   }
 
-  function makeQItem(item, dotClass, showMeta) {
+  function makeItem(item, dotCls, showMeta) {
     const div = document.createElement('div');
     div.className = 'q-item';
-    const dot = document.createElement('span');
-    dot.className = `q-status ${dotClass}`;
-    const lbl = document.createElement('span');
-    lbl.className = 'q-label';
-    lbl.textContent = item.entry;
-    lbl.title = item.entry;
-    div.appendChild(dot);
-    div.appendChild(lbl);
-    if (showMeta && item.tracks > 0) {
-      const meta = document.createElement('span');
-      meta.className = 'q-meta';
-      meta.textContent = `${item.tracks} trk`;
-      div.appendChild(meta);
-    }
+    div.innerHTML = `<span class="q-dot ${dotCls}"></span>
+      <span class="q-label" title="${esc(item.entry)}">${esc(item.entry)}</span>
+      ${showMeta && item.tracks > 0 ? `<span class="q-meta">${item.tracks} trk</span>` : ''}`;
     if (item.status !== 'in_progress') {
       const btn = document.createElement('button');
-      btn.className = 'q-del'; btn.textContent = '×'; btn.title = 'Remove';
-      btn.dataset.entry = item.entry;
-      btn.addEventListener('click', function() { deleteEntry(this.dataset.entry, div); });
+      btn.className = 'q-del'; btn.textContent = '×'; btn.dataset.entry = item.entry;
+      btn.addEventListener('click', function(){ deleteEntry(this.dataset.entry, div); });
       div.appendChild(btn);
     }
     return div;
@@ -303,12 +363,12 @@
 
   async function addAlbum(e) {
     e.preventDefault();
-    const input = document.getElementById('add-input');
-    const entry = input.value.trim();
+    const inp = document.getElementById('add-input');
+    const entry = inp.value.trim();
     if (!entry) return;
     const r = await api('/api/watchlist', { method:'POST', body: JSON.stringify({entry}) });
-    if (r.duplicate) { input.style.borderColor = 'var(--amber)'; setTimeout(() => input.style.borderColor='', 1200); return; }
-    input.value = '';
+    if (r.duplicate) { inp.style.borderColor='var(--amber)'; setTimeout(()=>inp.style.borderColor='',1200); return; }
+    inp.value = '';
     loadQueue();
   }
 
@@ -318,11 +378,33 @@
     loadQueue();
   }
 
+  // ── Log ───────────────────────────────────────
+  function classifyLine(t) {
+    if (t.startsWith('---'))                          return 'hdr';
+    if (t.startsWith('==>') && /[Dd]one/.test(t))    return 'done';
+    if (t.startsWith('==>'))                          return 'sec';
+    if (/\bOK\b|close enough|verified/.test(t))      return 'ok';
+    if (/MISMATCH|WARNING|FAILED|failed/i.test(t))   return 'warn';
+    if (/error/i.test(t))                             return 'err';
+    if (/MusicBrainz:/.test(t))                       return 'mb';
+    return '';
+  }
+  function appendLog(text) {
+    const log = document.getElementById('log');
+    const empty = log.querySelector('.log-empty');
+    if (empty) empty.remove();
+    const s = document.createElement('span');
+    s.className = 'll ' + classifyLine(text);
+    s.textContent = text;
+    log.appendChild(s);
+    log.scrollTop = log.scrollHeight;
+  }
+
   // ── Library ───────────────────────────────────
   async function loadLibrary() {
     const { albums, source } = await api('/api/library');
     document.getElementById('lib-source').textContent = source === 'device' ? 'Device' : 'Staging';
-    document.getElementById('lib-count').textContent = `${albums.length} album${albums.length !== 1 ? 's' : ''}`;
+    document.getElementById('lib-count').textContent = `${albums.length} album${albums.length!==1?'s':''}`;
     const grid = document.getElementById('lib-grid');
     grid.innerHTML = '';
     albums.forEach(a => {
@@ -335,62 +417,10 @@
     });
   }
 
-  // ── Sync ──────────────────────────────────────
-  async function startSync() {
-    const r = await api('/api/sync', { method:'POST' });
-    if (r.error) { alert(r.error); return; }
-    setRunning(true);
-    document.getElementById('log').innerHTML = '';
-    connectStream();
-  }
-
-  async function stopSync() {
-    await api('/api/sync/stop', { method:'POST' });
-  }
-
-  function connectStream() {
-    if (es) es.close();
-    es = new EventSource('/stream');
-    es.onmessage = e => {
-      const msg = JSON.parse(e.data);
-      if (msg.t === 'log') appendLog(msg.text);
-      if (msg.t === 'done') { setRunning(false); loadQueue(); loadLibrary(); es.close(); es = null; }
-    };
-    es.onerror = () => { setRunning(false); es.close(); es = null; };
-  }
-
-  function classifyLine(t) {
-    if (t.startsWith('---'))                       return 'hdr';
-    if (t.startsWith('==>') && /[Dd]one/.test(t)) return 'done';
-    if (t.startsWith('==>'))                       return 'sec';
-    if (/\bOK\b|close enough|verified/.test(t))   return 'ok';
-    if (/MISMATCH|WARNING|FAILED|failed/i.test(t)) return 'warn';
-    if (/error/i.test(t))                          return 'err';
-    if (/MusicBrainz:/.test(t))                    return 'mb';
-    return '';
-  }
-
-  function appendLog(text) {
-    const log = document.getElementById('log');
-    const empty = log.querySelector('.log-empty');
-    if (empty) empty.remove();
-    const span = document.createElement('span');
-    span.className = 'll ' + classifyLine(text);
-    span.textContent = text;
-    log.appendChild(span);
-    log.scrollTop = log.scrollHeight;
-  }
-
   // ── Init ──────────────────────────────────────
   pollStatus();
   loadQueue();
-  loadLibrary();
-  setInterval(async () => {
-    await pollStatus();
-    const running = document.getElementById('sync-btn').disabled;
-    if (running) { loadQueue(); loadLibrary(); }
-  }, 5000);
-  setInterval(loadLibrary, 30000);
+  setInterval(pollStatus, 5000);
 </script>
 </body>
 </html>

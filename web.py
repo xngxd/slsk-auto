@@ -10,9 +10,10 @@ AUDIO_EXTS = {'.mp3', '.flac', '.opus', '.ogg', '.m4a'}
 CSV_FIELDS = ['entry', 'tmp_path', 'status', 'verified']
 
 app = Flask(__name__)
-_sync_proc = None
+_proc = None
+_proc_name = None
 _output_queue: queue.Queue = queue.Queue()
-_sync_lock = threading.Lock()
+_proc_lock = threading.Lock()
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -127,21 +128,30 @@ def index():
     return render_template("index.html")
 
 
+def _is_running():
+    return _proc is not None and _proc.poll() is None
+
+def _external_script():
+    for script in ("sync.sh", "download.sh", "copy.sh"):
+        try:
+            subprocess.check_output(["pgrep", "-f", script], text=True)
+            return script.replace(".sh", "")
+        except subprocess.CalledProcessError:
+            pass
+    return None
+
 @app.route("/api/status")
 def api_status():
     _, dev = get_paths()
-    managed = _sync_proc is not None and _sync_proc.poll() is None
-    try:
-        external = bool(subprocess.check_output(["pgrep", "-f", "sync.sh"], text=True).strip())
-    except subprocess.CalledProcessError:
-        external = False
+    running = _is_running()
+    script = _proc_name if running else _external_script()
     rows = read_csv()
-    in_progress = sum(1 for r in rows if r['status'] == 'in_progress')
     return jsonify({
-        "sync_running": managed or external,
+        "running": bool(running or script),
+        "running_script": script,
         "device_mounted": dev.is_dir(),
         "device_name": dev.name,
-        "in_progress_count": in_progress,
+        "in_progress_count": sum(1 for r in rows if r['status'] == 'in_progress'),
     })
 
 
@@ -223,33 +233,41 @@ def api_library():
     return jsonify({"albums": unique, "source": src_label, "path": str(src)})
 
 
-@app.route("/api/sync", methods=["POST"])
-def api_sync_start():
-    global _sync_proc
-    with _sync_lock:
-        if _sync_proc is not None and _sync_proc.poll() is None:
-            return jsonify({"error": "already running"}), 400
+def _start_script(name):
+    global _proc, _proc_name
+    with _proc_lock:
+        if _is_running():
+            return False
         while not _output_queue.empty():
             try: _output_queue.get_nowait()
             except queue.Empty: break
-        _sync_proc = subprocess.Popen(
-            ["bash", str(SCRIPT_DIR / "sync.sh")],
+        _proc = subprocess.Popen(
+            ["bash", str(SCRIPT_DIR / f"{name}.sh")],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, bufsize=1, cwd=str(SCRIPT_DIR),
         )
-        def _reader():
-            for line in iter(_sync_proc.stdout.readline, ''):
+        _proc_name = name
+        def _reader(p=_proc):
+            for line in iter(p.stdout.readline, ''):
                 _output_queue.put(re.sub(r'(\x1b\[[0-9;]*[a-zA-Z]|\r)', '', line.rstrip()))
             _output_queue.put(None)
         threading.Thread(target=_reader, daemon=True).start()
-    return jsonify({"ok": True})
+    return True
 
+@app.route("/api/sync",     methods=["POST"])
+def api_sync():     return (jsonify({"ok": True}) if _start_script("sync")     else jsonify({"error": "already running"}), 400)
 
-@app.route("/api/sync/stop", methods=["POST"])
-def api_sync_stop():
-    with _sync_lock:
-        if _sync_proc is not None and _sync_proc.poll() is None:
-            _sync_proc.terminate()
+@app.route("/api/download", methods=["POST"])
+def api_download(): return (jsonify({"ok": True}) if _start_script("download") else jsonify({"error": "already running"}), 400)
+
+@app.route("/api/copy",     methods=["POST"])
+def api_copy():     return (jsonify({"ok": True}) if _start_script("copy")     else jsonify({"error": "already running"}), 400)
+
+@app.route("/api/stop", methods=["POST"])
+def api_stop():
+    with _proc_lock:
+        if _is_running():
+            _proc.terminate()
             return jsonify({"ok": True})
     return jsonify({"error": "not running"}), 400
 
