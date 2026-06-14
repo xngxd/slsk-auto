@@ -1,0 +1,7 @@
+[soulseek]
+username = ""
+password = ""
+
+[paths]
+staging = "~/Music/slsk-staging"
+device  = "/Volumes/surfans F20"
