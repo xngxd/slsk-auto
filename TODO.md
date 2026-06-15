@@ -1,6 +1,97 @@
 # TODO — NO DOWNLOADS REFUSED
 
-Shared work tracking for backend and UX agents. Update status inline as work progresses.
+Shared work tracking for all agents. Update status inline as work progresses.
+
+---
+
+## Rebrand — NO DOWNLOADS REFUSED
+
+The internal codename is `slsk-auto`. The product name is **NO DOWNLOADS REFUSED** — it's
+already in the README, it's already the title of this file, it should be on the screen.
+
+The current aesthetic (warm cream, rounded card, soft blur, score watermark) is lovely but
+wrong for what this is. This app should feel like a loading dock. Brutalist. Dark. High
+contrast. The kind of UI that makes you feel like you are doing something slightly illegal,
+efficiently, with zero apology.
+
+### [product] Surface the real name: slsk-auto → NO DOWNLOADS REFUSED
+
+- [x] Update `<title>` in `templates/index.html`: `slsk-auto` → `NO DOWNLOADS REFUSED`
+- [x] Update `.logo` wordmark text in topbar: `slsk-auto` → `NO DOWNLOADS REFUSED`
+      (it can be small-capped, abbreviated as `NDR` in tight layouts if needed — decide in ux)
+- [x] Update `CLAUDE.md` title line to lead with `NO DOWNLOADS REFUSED` — already done
+- [ ] Add `<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">` to `<head>`
+
+### [ux] Brutalist dark redesign — Phase 1: Foundation
+
+Full visual direction change. Felix executes. This is the brief.
+
+**Color system — kill the cream:**
+- [ ] `--bg: #080808` — near black, not pure black
+- [ ] `--card: #101010` — one step up, barely perceptible
+- [ ] `--border: #222222`
+- [ ] `--text: #f0f0f0` — off-white, not blinding
+- [ ] `--muted: #555555`
+- [ ] `--red: #ff2020` — electric. The only accent with permission to scream.
+- [ ] `--green: #00e060`, `--amber: #ffaa00` — signal colors stay, electric versions
+- [ ] Footer and body are one dark register — no separate footer bg color
+
+**Shape language — no softness:**
+- [ ] `.card` `border-radius: 16px → 0`. No floating card. Full bleed.
+- [ ] `.hdr-btn` `border-radius: 4px → 0`
+- [ ] `.footer-btn` `border-radius: 3px → 0`
+- [ ] `.alb-art` `border-radius: 3px → 0`. Album art is a rectangle. Honor it.
+- [ ] Kill `box-shadow` on `.card`. Structure via color + border, not shadow.
+
+**Typography — weight contrast:**
+- [ ] `.logo`: `font-size: 11px`, `font-weight: 900`, `letter-spacing: 0.15em`,
+      `text-transform: uppercase` — the full name or `NDR` if space is tight
+- [ ] `.hero-title`: `font-size: 52px`, `font-weight: 900`, `letter-spacing: -0.05em`
+      — when something is downloading, you feel it
+- [ ] `.lib-count`: `font-weight: 900`, `font-size: 32px`
+- [ ] Group separator labels: `letter-spacing: 0.22em`, `font-size: 8px` — stencil energy
+- [ ] Tab labels: `letter-spacing: 0.12em`
+
+**Texture — commit or cut:**
+- [ ] Remove `.bg-score` / `score.jpg` — ghost staff-lines on black = invisible = pointless.
+      If texture is wanted later, do it properly: CSS `noise` or SVG grain on `body::before`.
+
+**Explicit structure via borders:**
+- [ ] `border-top: 1px solid var(--border)` on tab row
+- [ ] `border-bottom: 1px solid #1a1a1a` between `.q-item` rows
+- [ ] Footer `border-top: 1px solid var(--border)` — explicit, not implied
+
+### [ux] Brutalist dark redesign — Phase 2: Hero and Active State
+
+The hero is where the most potential is. A download in progress should look like a concert
+screen.
+
+- [ ] Hero when **live**: `background: var(--red)` — entire hero block goes red, text
+      inverts to white. Unmissable. No subtlety.
+- [ ] Drop `hero-glow` keyframe animation entirely — replace with red border opacity pulse
+- [ ] `hero-live-dot`: `8px × 8px` — it reads on dark, it disappears at 6px on cream
+- [ ] Hero when idle: `background: transparent`, `border: 1px solid var(--border)`
+- [ ] When live: `.logo` wordmark also pulses to red — full brand moment
+
+### [ux] Brutalist dark redesign — Phase 3: Activity log
+
+The Activity tab is a terminal. Make it look like one.
+
+- [ ] `#log` background: `#000000` — true black. The one place for pure black.
+- [ ] Log default text: `#cccccc`, `font-size: 12px`, `line-height: 1.7`
+- [ ] While running: blinking `▋` cursor appended to last log line
+- [ ] Idle empty state: `$` prompt style instead of italic "Run download…" copy
+
+### [ux] Brutalist dark redesign — Phase 4: Library
+
+- [ ] Reduce max blur `10px → 4px` — dark bg + high blur = smear artifacts
+- [ ] `.alb-art-ph` placeholder: add centered `◼` glyph in `--muted` — explicit, not broken
+- [ ] `.alb-artist` label: `letter-spacing: 0.15em` — it's a stencil, commit to it
+
+### [ux] Favicon / identity mark
+
+- [ ] Create `static/favicon.svg`: white `H` on `#080808` 16×16 square
+- [ ] Wire it up in `<head>` of `index.html`
 
 ---
 
@@ -100,9 +191,10 @@ Lightweight iTunes: decide which albums actually get copied to the Surfans F20.
 - [x] `copy.sh` builds rsync exclude list from entries with `sync=no`
 
 ### [ux] Sync selector UI
-- [ ] Per-album toggle in Library tab (on/off → synced/excluded)
-- [ ] Visual distinction for excluded albums (greyed out, strike-through, or lock icon)
-- [ ] Batch controls: "sync all" / "sync none" in Library tab header
+- [x] Per-album toggle in Library tab (● = synced, ○ = excluded) — only shown for watchlist-tracked albums
+- [x] Excluded albums: strikethrough name, reduced opacity on art + info
+- [x] Batch controls: "All on" / "All off" in Library toolbar
+- [x] Folder→entry join via basename(tmp_path) to handle prep.sh renames
 
 ### [backend] Device reconciliation script
 Clean up the Surfans F20 to match what's currently in staging.
@@ -137,6 +229,14 @@ Last run crashed mid-batch. In Rainbows, channel ORANGE, Nymph, Alias, Stretch 2
 The Phase 0 Python reconciler is an inline heredoc in `download.sh`. `test_reconciler.py` mirrors it manually.
 - [x] `test_reconciler.py` updated to mirror `tokenize()`/`tokens_match()` — also added dedicated `tokenize` and `tokens_match` test suites including false-positive regression
 - [ ] Consider extracting to a standalone `reconcile.py` so there's one source of truth
+
+### [backend] `mb_track_count` fails when album name includes year — lib.sh
+`mb_track_count "Janet Jackson" "janet. (1993)"` returned no results because MB titles never include the year disambiguation we append. Same bug hits every year-suffixed entry.
+- [x] Strip `(YYYY)` from album before building the MB query (`re.sub` in the Python inline). Verified: janet. → 28 tracks, Damita Jo → 23 tracks.
+
+### [backend] `find_folder` can't distinguish albums whose title is a subset of the artist name
+`janet.` tokenises to `["janet"]`, which also appears in `"Janet Jackson"` — so any Janet Jackson folder matches regardless of album. `find_folder "Janet Jackson" "janet."` incorrectly returns the Damita Jo folder.
+- [ ] Require at least one album token that is NOT already covered by the artist tokens. If no discriminating album token exists, skip `find_folder` and fall back to before/after diff only.
 
 ---
 

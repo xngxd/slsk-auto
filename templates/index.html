@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>slsk-auto</title>
+  <title>NO DOWNLOADS REFUSED</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -56,7 +56,7 @@
       padding: 14px 22px 10px;
       flex-shrink: 0;
     }
-    .logo { font-weight: 700; font-size: 12px; letter-spacing: -0.02em; color: var(--text); }
+    .logo { font-weight: 900; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text); white-space: nowrap; }
     .device-label { font-size: 11px; color: var(--muted); }
     .device-label.on { color: var(--text); }
     .hdr-spacer { flex: 1; }
@@ -337,7 +337,7 @@
 
     <!-- Top bar -->
     <div class="topbar">
-      <div class="logo">slsk-auto</div>
+      <div class="logo">NO DOWNLOADS REFUSED</div>
       <div id="device-label" class="device-label">checking…</div>
       <div class="hdr-spacer"></div>
       <div class="hdr-btns">
@@ -690,13 +690,13 @@
     row._syncVal = syncVal;
   }
 
-  async function toggleSync(row, entry) {
+  async function toggleSync(row) {
     const next = row._syncVal === 'no' ? '' : 'no';
     applySyncState(row, next);
     updateLibBlur();
     await api('/api/watchlist/sync', {
       method: 'PATCH',
-      body: JSON.stringify({ entry, sync: next })
+      body: JSON.stringify({ entry: row._entry, sync: next })
     });
   }
 
@@ -725,9 +725,15 @@
     ]);
     _libAlbums = albums;
 
-    const syncMap = {};
+    // Key by folder basename (matches a.name in library) — tmp_path is the renamed staging folder
+    const syncMap = {}; // folderName → {entry, sync}
     ['not_started','in_progress','completed','failed','verified'].forEach(bucket => {
-      (wlData[bucket] || []).forEach(item => { syncMap[item.entry] = item.sync || ''; });
+      (wlData[bucket] || []).forEach(item => {
+        if (item.tmp_path) {
+          const base = item.tmp_path.replace(/\/$/, '').split('/').pop();
+          if (base) syncMap[base] = { entry: item.entry, sync: item.sync || '' };
+        }
+      });
     });
 
     document.getElementById('lib-source').textContent = source === 'device' ? 'Device' : 'Staging';
@@ -737,9 +743,10 @@
     expandedAlbumRow = null;
 
     albums.forEach(a => {
+      const wlMatch = syncMap[a.name];
       const row = document.createElement('div');
       row.className = 'alb';
-      row._entry = a.name;
+      row._entry = wlMatch ? wlMatch.entry : null;
       row.addEventListener('click', () => openAlbum(row, a));
 
       const img = document.createElement('img');
@@ -761,11 +768,12 @@
       row.appendChild(count);
 
       const syncBtn = document.createElement('button');
-      syncBtn.addEventListener('click', e => { e.stopPropagation(); toggleSync(row, a.name); });
+      syncBtn.addEventListener('click', e => { e.stopPropagation(); if (row._entry) toggleSync(row); });
       row._syncBtn = syncBtn;
-      row.appendChild(syncBtn);
-
-      applySyncState(row, syncMap[a.name] ?? '');
+      if (wlMatch) {
+        row.appendChild(syncBtn);
+        applySyncState(row, wlMatch.sync);
+      }
       list.appendChild(row);
     });
     updateLibBlur();
