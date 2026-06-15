@@ -455,7 +455,7 @@
     const s = await api('/api/status');
     const lbl = document.getElementById('device-label');
     lbl.className = s.device_mounted ? 'device-label on' : 'device-label';
-    lbl.textContent = s.device_mounted ? s.device_name : 'no device';
+    lbl.textContent = s.device_mounted ? `laptop connected to ${s.device_name}` : 'no device';
     setRunning(s.running, s.running_script);
     if (s.running) {
       loadQueue();
