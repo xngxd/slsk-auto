@@ -10,7 +10,7 @@ WATCHLIST_PATH = SCRIPT_DIR / "watchlist.csv"
 LOGS_DIR = SCRIPT_DIR / "logs"
 ARTWORK_DIR = SCRIPT_DIR / "artwork"
 AUDIO_EXTS = {'.mp3', '.flac', '.opus', '.ogg', '.m4a'}
-CSV_FIELDS = ['entry', 'tmp_path', 'status', 'verified', 'fail_reason', 'sync']
+CSV_FIELDS = ['entry', 'tmp_path', 'status', 'verified', 'fail_reason', 'sync', 'attempts', 'tried_users']
 LOGS_DIR.mkdir(exist_ok=True)
 ARTWORK_DIR.mkdir(exist_ok=True)
 
@@ -304,36 +304,55 @@ def _external_script():
 
 @app.route("/api/status")
 def api_status():
+    import shutil
     _, dev = get_paths()
     running = _is_running()
     script = _proc_name if running else _external_script()
     rows = read_csv()
+    mounted = dev.is_dir()
+    device_free = device_total = None
+    if mounted:
+        try:
+            usage = shutil.disk_usage(dev)
+            device_free  = round(usage.free  / 1e9, 1)
+            device_total = round(usage.total / 1e9, 1)
+        except Exception:
+            pass
     return jsonify({
         "running": bool(running or script),
         "running_script": script,
-        "device_mounted": dev.is_dir(),
+        "device_mounted": mounted,
         "device_name": dev.name,
+        "device_free_gb": device_free,
+        "device_total_gb": device_total,
         "in_progress_count": sum(1 for r in rows if r['status'] == 'in_progress'),
     })
 
 
 @app.route("/api/watchlist")
 def api_watchlist_get():
-    staging, _ = get_paths()
+    staging, device = get_paths()
+    dev_mounted = device.is_dir()
     rows = reconcile_rows(read_csv(), staging)
     result = {'not_started': [], 'in_progress': [], 'completed': [],
               'failed': [], 'verified': []}
     for r in rows:
         status = r['status']
         verified = r['verified']
+        tp = r['tmp_path']
+        folder_name = Path(tp).name if tp else ''
+        on_device = dev_mounted and bool(folder_name) and (device / folder_name).is_dir()
         item = {
             'entry': r['entry'],
-            'tmp_path': r['tmp_path'],
+            'tmp_path': tp,
             'status': status,
             'verified': verified,
-            'tracks': count_audio(r['tmp_path']) if r['tmp_path'] else 0,
+            'tracks': count_audio(tp) if tp else 0,
             'fail_reason': r.get('fail_reason', ''),
-            'sync': r.get('sync', ''),  # '' or 'yes' → synced; 'no' → excluded
+            'sync': r.get('sync', ''),
+            'attempts': int(r.get('attempts', 0) or 0),
+            'tried_users': r.get('tried_users', ''),
+            'on_device': on_device,
         }
         if status == 'completed' and verified == 'verified':
             result['verified'].append(item)

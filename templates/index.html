@@ -240,6 +240,7 @@
       border-bottom: 1px solid #ddd;
     }
     .lib-tag { font-size: 8px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); font-weight: 800; }
+    .lib-storage { font-size: 8px; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
     .lib-count {
       font-size: 32px; font-weight: 900; letter-spacing: -0.05em; color: var(--text);
       line-height: 1;
@@ -391,6 +392,7 @@
     <div class="page" id="page-lib">
       <div class="lib-toolbar">
         <span id="lib-source" class="lib-tag"></span>
+        <span id="lib-storage" class="lib-storage"></span>
         <div style="flex:1"></div>
         <div class="lib-batch">
           <button class="lib-batch-btn" onclick="syncBatch('')">All on</button>
@@ -456,6 +458,12 @@
     const lbl = document.getElementById('device-label');
     lbl.className = s.device_mounted ? 'device-label on' : 'device-label';
     lbl.textContent = s.device_mounted ? `laptop connected to ${s.device_name}` : 'no device';
+    const storageLbl = document.getElementById('lib-storage');
+    if (storageLbl) {
+      storageLbl.textContent = (s.device_mounted && s.device_free_gb != null)
+        ? `${s.device_free_gb} GB free of ${s.device_total_gb} GB`
+        : '';
+    }
     setRunning(s.running, s.running_script);
     if (s.running) {
       loadQueue();
@@ -580,12 +588,16 @@
     const div = document.createElement('div');
     div.className = 'q-item';
     const reason = labelCls === 'failed' && item.fail_reason ? item.fail_reason : '';
+    const attemptsHint = item.attempts > 0
+      ? (item.tried_users ? `attempt ${item.attempts} · tried: ${item.tried_users}` : `attempt ${item.attempts}`)
+      : '';
     div.innerHTML = `
       <div class="q-info">
         <span class="q-label ${labelCls}" title="${esc(item.entry)}">${esc(item.entry)}</span>
         ${reason ? `<span class="q-reason">${esc(reason)}</span>` : ''}
       </div>
       ${showMeta && item.tracks > 0 ? `<span class="q-meta">${item.tracks} trk</span>` : ''}
+      ${item.attempts > 1 ? `<span class="q-meta" title="${esc(attemptsHint)}">#${item.attempts}</span>` : ''}
       ${item.on_device ? `<span class="q-device">on device</span>` : ''}`;
     const btn = document.createElement('button');
     btn.className = 'q-del'; btn.textContent = '×'; btn.dataset.entry = item.entry;
