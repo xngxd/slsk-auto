@@ -10,11 +10,12 @@ WATCHLIST_PATH = SCRIPT_DIR / "watchlist.csv"
 LOGS_DIR = SCRIPT_DIR / "logs"
 ARTWORK_DIR = SCRIPT_DIR / "artwork"
 AUDIO_EXTS = {'.mp3', '.flac', '.opus', '.ogg', '.m4a'}
-CSV_FIELDS = ['entry', 'tmp_path', 'status', 'verified', 'fail_reason']
+CSV_FIELDS = ['entry', 'tmp_path', 'status', 'verified', 'fail_reason', 'sync']
 LOGS_DIR.mkdir(exist_ok=True)
 ARTWORK_DIR.mkdir(exist_ok=True)
 
 app = Flask(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 _proc = None
 _proc_name = None
 _output_queue: queue.Queue = queue.Queue()
@@ -300,7 +301,7 @@ def _is_running():
     return _proc is not None and _proc.poll() is None
 
 def _external_script():
-    for script in ("sync.sh", "download.sh", "copy.sh", "verify.sh"):
+    for script in ("sync.sh", "download.sh", "copy.sh", "verify.sh", "cleanup.sh", "reconcile_device.sh"):
         try:
             subprocess.check_output(["pgrep", "-f", script], text=True)
             return script.replace(".sh", "")
@@ -339,6 +340,7 @@ def api_watchlist_get():
             'verified': verified,
             'tracks': count_audio(r['tmp_path']) if r['tmp_path'] else 0,
             'fail_reason': r.get('fail_reason', ''),
+            'sync': r.get('sync', ''),  # '' or 'yes' → synced; 'no' → excluded
         }
         if status == 'completed' and verified == 'verified':
             result['verified'].append(item)
@@ -369,6 +371,26 @@ def api_watchlist_delete():
         return jsonify({"error": "missing entry"}), 400
     delete_entry(entry)
     return jsonify({"ok": True})
+
+
+@app.route("/api/watchlist/sync", methods=["PATCH"])
+def api_watchlist_sync():
+    body = request.json or {}
+    entry = body.get("entry", "").strip()
+    sync  = body.get("sync", "").strip()
+    if not entry:
+        return jsonify({"error": "missing entry"}), 400
+    if sync not in ("yes", "no", ""):
+        return jsonify({"error": "sync must be 'yes', 'no', or ''"}), 400
+    rows = read_csv()
+    if not any(r['entry'] == entry for r in rows):
+        return jsonify({"error": "not found"}), 404
+    # update via write_csv (atomic)
+    for r in rows:
+        if r['entry'] == entry:
+            r['sync'] = sync
+    write_csv(rows)
+    return jsonify({"ok": True, "entry": entry, "sync": sync})
 
 
 @app.route("/api/library")
@@ -440,6 +462,41 @@ def api_artwork():
                     headers={'Cache-Control': 'public, max-age=86400'})
 
 
+@app.route("/api/reconcile-device")
+def api_reconcile_device_preview():
+    staging, device = get_paths()
+    if not device.is_dir():
+        return jsonify({"error": "device not mounted"}), 404
+
+    rows = read_csv()
+    # Staging folders that should stay: all entries with sync != 'no' that have a folder
+    staged_names = set()
+    for r in rows:
+        if r.get('sync', '') == 'no':
+            continue
+        tp = r.get('tmp_path', '')
+        if tp and Path(tp).is_dir():
+            staged_names.add(Path(tp).name.lower())
+    # Also include any staging folder not in CSV (untracked downloads)
+    for search in [staging, staging / 'tmp']:
+        if not search.is_dir():
+            continue
+        for d in search.iterdir():
+            if d.is_dir() and not d.name.startswith('.') and count_audio(d) > 0:
+                staged_names.add(d.name.lower())
+
+    to_remove = []
+    for d in sorted(device.iterdir()):
+        if not d.is_dir() or d.name.startswith('.'):
+            continue
+        if count_audio(d) == 0:
+            continue
+        if d.name.lower() not in staged_names:
+            to_remove.append({"name": d.name, "path": str(d), "tracks": count_audio(d)})
+
+    return jsonify({"to_remove": to_remove, "count": len(to_remove)})
+
+
 def _start_script(name):
     global _proc, _proc_name
     with _proc_lock:
@@ -483,6 +540,14 @@ def api_copy():
 @app.route("/api/verify", methods=["POST"])
 def api_verify():
     return jsonify({"ok": True}) if _start_script("verify") else (jsonify({"error": "already running"}), 400)
+
+@app.route("/api/cleanup", methods=["POST"])
+def api_cleanup():
+    return jsonify({"ok": True}) if _start_script("cleanup") else (jsonify({"error": "already running"}), 400)
+
+@app.route("/api/reconcile-device", methods=["POST"])
+def api_reconcile_device_run():
+    return jsonify({"ok": True}) if _start_script("reconcile_device") else (jsonify({"error": "already running"}), 400)
 
 @app.route("/api/logs")
 def api_logs():
