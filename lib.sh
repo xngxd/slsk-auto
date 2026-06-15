@@ -16,7 +16,9 @@ load_config() {
   PASSWORD=$(parse_toml_val password)
   STAGING=$(parse_toml_val staging | sed "s|~|$HOME|")
   DEVICE=$(parse_toml_val device | sed "s|~|$HOME|")
-  [[ -z "$USERNAME" || -z "$PASSWORD" ]] && { echo "config.toml: missing credentials"; exit 1; }
+  if [[ -z "$USERNAME" || -z "$PASSWORD" ]]; then
+    echo "config.toml: missing credentials"; exit 1
+  fi
 }
 
 # ── CSV helpers ───────────────────────────────────────────────────────────────
@@ -53,17 +55,41 @@ updates = dict(p.split('=', 1) for p in pairs)
 rows = []
 with open(path, newline='') as f:
     reader = csv.DictReader(f)
-    fieldnames = reader.fieldnames
+    fieldnames = list(reader.fieldnames)
     for row in reader:
         if row['entry'] == entry:
             row.update(updates)
         rows.append(row)
+for key in updates:
+    if key not in fieldnames:
+        fieldnames.append(key)
 tmp = path + '.tmp'
 with open(tmp, 'w', newline='') as f:
-    w = csv.DictWriter(f, fieldnames=fieldnames)
+    w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')
     w.writeheader(); w.writerows(rows)
 os.replace(tmp, path)
 PYEOF
+}
+
+# ── Entry parsing ────────────────────────────────────────────────────────────
+#
+# Watchlist convention: Album [— or -] Artist
+# Both separators, same order — album always comes first.
+
+parse_entry() {
+  if [[ "$1" =~ ^(.+)[[:space:]]+—[[:space:]]+(.+)$ ]]; then
+    album="${BASH_REMATCH[1]}"; artist="${BASH_REMATCH[2]}"
+  elif [[ "$1" =~ ^(.+)[[:space:]]+-[[:space:]]+(.+)$ ]]; then
+    album="${BASH_REMATCH[1]}"; artist="${BASH_REMATCH[2]}"
+  else
+    artist=""; album="$1"
+  fi
+}
+
+# Strip trailing/embedded (YYYY) from album name — used for folder matching
+# where staged folder names don't include the year qualifier.
+strip_year() {
+  echo "$1" | sed 's/[[:space:]]*([0-9]\{4\})[[:space:]]*//'
 }
 
 # ── MusicBrainz ───────────────────────────────────────────────────────────────
