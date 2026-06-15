@@ -7,15 +7,15 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:     #e8e4da;
-      --card:   #f5f2eb;
-      --border: #d4d0c6;
-      --text:   #0e0d0b;
-      --muted:  #a09c92;
-      --green:  #1e6b3a;
-      --amber:  #8a5210;
-      --red:    #a82020;
-      --blue:   #1c3d8a;
+      --bg:     #ffffff;
+      --card:   #ffffff;
+      --border: #000000;
+      --text:   #0a0a0a;
+      --muted:  #999999;
+      --green:  #006600;
+      --amber:  #cc7700;
+      --red:    #dd0000;
+      --blue:   #0000ff;
       --mono:   'SF Mono','Cascadia Code',Consolas,monospace;
     }
     body {
@@ -28,36 +28,18 @@
       padding-right: env(safe-area-inset-right);
     }
 
-    /* ── Score texture ── */
-    .bg-score {
-      position: fixed; top: 0; left: 50%;
-      transform: translateX(-50%);
-      width: 120%; pointer-events: none; z-index: 0;
-      opacity: 0.07; mix-blend-mode: multiply;
-      user-select: none; -webkit-user-select: none;
-    }
-
-    /* ── Shell ── */
-    .shell {
-      position: relative; z-index: 1;
-      flex: 1; display: flex; flex-direction: column; overflow: hidden;
-      padding: 16px 16px 0;
-    }
-    .card {
-      flex: 1; display: flex; flex-direction: column; overflow: hidden;
-      background: var(--card);
-      border-radius: 16px 16px 0 0;
-      box-shadow: 0 -2px 40px rgba(0,0,0,0.08);
-    }
+    /* ── Shell / Card — full bleed ── */
+    .shell { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .card  { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--card); }
 
     /* ── Top bar ── */
     .topbar {
       display: flex; align-items: flex-start; gap: 10px;
-      padding: 40px 44px 28px;
+      padding: 28px 32px 20px;
       flex-shrink: 0;
     }
     .topbar-identity { display: flex; flex-direction: column; gap: 6px; }
-    .logo { font-family: Helvetica, Arial, sans-serif; font-weight: 900; font-size: 48px; letter-spacing: -0.03em; text-transform: uppercase; color: var(--text); white-space: nowrap; line-height: 1; }
+    .logo { font-family: Helvetica, Arial, sans-serif; font-weight: 900; font-size: 48px; letter-spacing: -0.03em; text-transform: uppercase; color: var(--text); line-height: 0.95; }
     .device-label { font-size: 11px; color: var(--muted); }
     .device-label.on { color: var(--text); }
 
@@ -327,7 +309,7 @@
     <!-- Top bar -->
     <div class="topbar">
       <div class="topbar-identity">
-        <div class="logo">NO DOWNLOADS REFUSED</div>
+        <div class="logo">NO DOWNLOADS<br>REFUSED</div>
         <div id="device-label" class="device-label">checking…</div>
       </div>
     </div>
