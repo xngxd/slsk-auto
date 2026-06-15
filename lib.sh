@@ -128,14 +128,27 @@ track_variance() {
 }
 
 find_folder() {
-  local artist album name
-  artist=$(echo "$1" | tr '[:upper:]' '[:lower:]')
-  album=$(echo "$2"  | tr '[:upper:]' '[:lower:]')
+  # Normalize: remove dots (M.I.A. → mia), lowercase, collapse non-alnum to spaces.
+  # Then require each resulting token (len≥2) to appear as a whole word in the folder name.
+  # This prevents "mia" from matching "miami" while still matching "M.I.A. - AIM".
+  local a_norm al_norm name_norm word match has_terms
+  a_norm=$(echo "$1"  | tr '[:upper:]' '[:lower:]' | tr -d '.' | tr -cs 'a-z0-9 ' ' ' | tr -s ' ')
+  al_norm=$(echo "$2" | tr '[:upper:]' '[:lower:]' | tr -d '.' | tr -cs 'a-z0-9 ' ' ' | tr -s ' ')
+  has_terms=false
+  for word in $a_norm $al_norm; do
+    [[ ${#word} -ge 2 ]] && { has_terms=true; break; }
+  done
+  $has_terms || return
   for search_dir in "$STAGING" "$STAGING/tmp"; do
     [[ -d "$search_dir" ]] || continue
     while IFS= read -r dir; do
-      name=$(basename "$dir" | tr '[:upper:]' '[:lower:]')
-      [[ "$name" == *"$artist"* && "$name" == *"$album"* ]] && { echo "$dir"; return; }
+      name_norm=" $(basename "$dir" | tr '[:upper:]' '[:lower:]' | tr -d '.' | tr -cs 'a-z0-9 ' ' ' | tr -s ' ') "
+      match=true
+      for word in $a_norm $al_norm; do
+        [[ ${#word} -lt 2 ]] && continue
+        [[ "$name_norm" == *" $word "* ]] || { match=false; break; }
+      done
+      $match && { echo "$dir"; return; }
     done < <(find "$search_dir" -maxdepth 1 -mindepth 1 -type d 2>/dev/null)
   done
 }

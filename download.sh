@@ -32,6 +32,15 @@ def parse_entry(entry):
         return m.group(2).strip(), re.sub(r'\s*\(\d{4}\)\s*', ' ', m.group(1)).strip()
     return '', entry
 
+def tokenize(s):
+    """Normalize and split into whole tokens. M.I.A. → ['mia'], not ['m','i','a']."""
+    s = s.lower().replace('.', '')
+    return [w for w in re.split(r'[^a-z0-9]+', s) if len(w) >= 2]
+
+def tokens_match(query_tokens, folder_name):
+    folder_set = set(tokenize(folder_name))
+    return bool(query_tokens) and all(w in folder_set for w in query_tokens)
+
 watchlist_path, staging_path, min_s = sys.argv[1], sys.argv[2], sys.argv[3]
 MIN_TRACKS = int(min_s)
 staging = Path(staging_path)
@@ -45,7 +54,7 @@ for search in [staging, staging / 'tmp']:
             continue
         n = count_audio(d)
         if n >= MIN_TRACKS:
-            staging_folders.append((d.name.lower(), str(d), n))
+            staging_folders.append((d.name, str(d), n))
 
 rows = []
 with open(watchlist_path, newline='') as f:
@@ -64,12 +73,12 @@ for row in rows:
         continue
 
     artist, album = parse_entry(row['entry'])
-    terms = [t.lower() for t in [artist, album] if t]
-    if not terms:
+    query_tokens = tokenize(artist) + tokenize(album)
+    if not query_tokens:
         continue
 
     for folder_name, folder_path, n in staging_folders:
-        if all(t in folder_name for t in terms):
+        if tokens_match(query_tokens, folder_name):
             old = row['status']
             row['status'] = 'completed'
             row['verified'] = 'unverified'
@@ -88,6 +97,48 @@ if changed:
     os.replace(tmp, watchlist_path)
 
 print(f"==> Reconciled {changed} entr{'y' if changed == 1 else 'ies'} from staging")
+PYEOF
+
+# ── Phase 0.5: reset stuck in_progress entries ───────────────────────────────
+# Any entry that is still in_progress with no valid staging folder got stranded
+# by a crashed run. Reset to not_started so Phase 2 picks it up again.
+python3 - "$WATCHLIST" <<'PYEOF'
+import csv, os, sys
+from pathlib import Path
+
+AUDIO_EXTS = {'.mp3', '.flac', '.opus', '.ogg', '.m4a'}
+
+watchlist_path = sys.argv[1]
+rows = []
+with open(watchlist_path, newline='') as f:
+    reader = csv.DictReader(f)
+    fieldnames = list(reader.fieldnames)
+    rows = list(reader)
+
+reset = 0
+for row in rows:
+    if row.get('status') != 'in_progress':
+        continue
+    tp = row.get('tmp_path', '')
+    if tp and Path(tp).is_dir():
+        has_audio = any(f.suffix.lower() in AUDIO_EXTS for f in Path(tp).iterdir() if f.is_file())
+        if has_audio:
+            continue  # folder is real and has audio, leave it
+    row['status'] = 'not_started'
+    row['tmp_path'] = ''
+    row['fail_reason'] = 'reset: no valid staging folder after crash'
+    reset += 1
+    print(f"  RESET → not_started: {row['entry']}")
+
+if reset:
+    tmp = watchlist_path + '.tmp'
+    with open(tmp, 'w', newline='') as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')
+        w.writeheader()
+        w.writerows(rows)
+    os.replace(tmp, watchlist_path)
+
+print(f"==> Reset {reset} stuck in_progress entr{'y' if reset == 1 else 'ies'} to not_started")
 PYEOF
 
 # ── Phase 1: verify completed-but-unverified ─────────────────────────────────
@@ -182,7 +233,7 @@ while IFS= read -r entry; do
   sldl_args=(
     "$sldl_search"
     --user "$USERNAME" --pass "$PASSWORD"
-    --path "$STAGING" --album
+    --path "$STAGING/tmp" --album
     --pref-format mp3 --pref-min-bitrate 320 --min-bitrate 128
     --interactive false
   )
