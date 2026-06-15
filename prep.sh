@@ -63,6 +63,11 @@ for dir in "$STAGING"/*/; do
   dir="${dir%/}"
   folder=$(basename "$dir")
 
+  if find "$dir" -maxdepth 1 -name "*.incomplete" -print -quit | grep -q .; then
+    echo "SKIP (.incomplete): $folder"
+    continue
+  fi
+
   find "$dir" -iname "*.lrc" -delete
 
   tag_info=$(read_id3 "$dir")

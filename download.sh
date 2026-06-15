@@ -201,8 +201,14 @@ while IFS= read -r entry; do
       result=$(verify_tracks "$new_folder" "$expected")
       [[ "$result" == "ok" ]] && verified_val="verified"
     fi
-    csv_set "$entry" "status=completed" "verified=$verified_val" "tmp_path=${new_folder:-}"
-    echo "    Done — marked $verified_val"
+    if [[ -n "$new_folder" ]] && find "$new_folder" -maxdepth 1 -name "*.incomplete" -print -quit | grep -q .; then
+      echo "    .incomplete files present — marking failed for retry"
+      csv_set "$entry" "status=failed" "verified=" "tmp_path=$new_folder" \
+        "fail_reason=.incomplete files remain after download"
+    else
+      csv_set "$entry" "status=completed" "verified=$verified_val" "tmp_path=${new_folder:-}"
+      echo "    Done — marked $verified_val"
+    fi
   else
     _fail_reason=$(grep -v '^[[:space:]]*$' "$_sldl_log" \
       | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g;s/\r//g' \
