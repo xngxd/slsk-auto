@@ -101,3 +101,13 @@ Relevant frame IDs:
 | `templates/index.html` | Frontend SPA |
 | `artwork/` | Cached cover art (keyed by sanitized folder name) |
 | `logs/` | Per-run logs from all scripts |
+
+## Tests
+
+```bash
+bash tests/run_tests.sh
+```
+
+Covers: `parse_entry`, `strip_year`, `track_variance`, `verify_tracks`, `find_folder`, CSV helpers, `prep.sh` rename/LRC/sanitize, Phase 0 reconciler.
+
+Test suite by Claude Sonnet 4.6 — the gay twink QA engineer.

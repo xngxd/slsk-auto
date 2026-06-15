@@ -35,6 +35,40 @@ Display `fail_reason` from API on failed queue items.
 
 ---
 
+## Queued — UX Polish
+
+### [ux] Hero / currently-downloading redesign
+The big title in the Queue hero is just the raw entry name of the first in-progress album — not informative enough and looks awkward when there are multiple.
+- [ ] Show a count badge ("3 downloading") prominently instead of or alongside the first title
+- [ ] List all in-progress entries as a compact stack, not just item[0] in the giant title slot
+- [ ] When only one item: show title large but also surface `tmp_path` folder or track count as a subtitle so you know it's actually progressing
+- [ ] Live pulse indicator should be more prominent — currently easy to miss
+
+### [ux] Library blur — reduce intensity + scroll behavior
+- [ ] Reduce max blur from 10px to ~5–6px — current level is too heavy
+- [ ] Tracklists (`.alb-tracks`) intentionally do not blur — this is correct, leave it
+- [ ] Confirm the scroll-tracking focal point feels natural on real content before locking in
+
+### [ux] UI cache — document and harden
+- [x] `TEMPLATES_AUTO_RELOAD = True` added to Flask config
+- [x] `Cache-Control: no-store` on the `/` route — browser never serves stale HTML
+
+### [ux] Library — tracklist expand on album click
+- [x] Click album row → fetches `/api/tracklist?folder=<path>`, renders inline below the row
+- [x] Click again to collapse; only one open at a time
+- [x] Track number, title, duration (mm:ss from TLEN); graceful fallback if no audio files
+
+### [ux] Activity log persistence
+- [x] On page load: reads most recent log file from `/api/logs` and populates Activity tab
+- [x] On tab switch to Activity (no active stream): reloads from file
+- [x] On page reload mid-download: `pollStatus` reconnects SSE stream if `running=true`
+
+### [ux] Score image background texture
+- [x] `Zn9Vr.jpg` (extended-technique score) served from `/static/score.jpg`
+- [x] `position: fixed`, `mix-blend-mode: multiply`, `opacity: 0.07` — ghost staff lines on cream bg
+
+---
+
 ## Queued — Small Features
 
 ### [backend] Track name linter / .incomplete guard
@@ -79,6 +113,30 @@ Clean up the Surfans F20 to match what's currently in staging.
 ### [ux] Device reconciliation UI
 - [ ] "Reconcile device" button in Library tab (only active when device is mounted)
 - [ ] Show diff preview before confirming
+
+---
+
+## Queued — Backend Bugs (from QA handoff)
+
+### [backend] Wrong staging path assigned to entries — download.sh:191–204
+Several watchlist entries marked `completed` but `tmp_path` points to the wrong album's folder (e.g. Kala → AIM folder).
+- [x] Root cause: `--path "$STAGING"` sent new downloads to staging root, but before/after diff only scanned `staging/tmp/`. Changed to `--path "$STAGING/tmp"` so sldl output and diff scan are consistent.
+- [x] Phase 0 now uses token matching (not substring) so cross-album false matches are gone.
+- [x] Manually corrected 17 wrong/stuck entries directly in `watchlist.csv`.
+
+### [backend] Loose `find_folder` matching — lib.sh:130–141
+Substring matching lets short artist tokens like "mia" match unrelated folders like "miami". 
+- [x] `find_folder` now normalizes both query and folder name: remove dots (M.I.A.→mia), lowercase, collapse non-alnum to spaces, then require each token (len≥2) to appear as a whole word. Phase 0 Python uses the same `tokenize()` + `tokens_match()` helpers.
+
+### [backend] 7 entries stuck `in_progress` — reset automatically
+Last run crashed mid-batch. In Rainbows, channel ORANGE, Nymph, Alias, Stretch 2, 1991 EP, Queen were stuck.
+- [x] Added **Phase 0.5** to `download.sh`: after Phase 0 reconcile, resets any `in_progress` entry whose `tmp_path` has no audio to `not_started` automatically on every future run.
+- [x] Manually reset all 7 stuck entries in `watchlist.csv` now.
+
+### [backend] Reconciler lives in two places — keep in sync
+The Phase 0 Python reconciler is an inline heredoc in `download.sh`. `test_reconciler.py` mirrors it manually.
+- [x] `test_reconciler.py` updated to mirror `tokenize()`/`tokens_match()` — also added dedicated `tokenize` and `tokens_match` test suites including false-positive regression
+- [ ] Consider extracting to a standalone `reconcile.py` so there's one source of truth
 
 ---
 

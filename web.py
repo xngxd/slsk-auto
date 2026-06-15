@@ -283,7 +283,9 @@ def get_tracklist(folder):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    resp = app.make_response(render_template("index.html"))
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
 
 
 def _is_running():
