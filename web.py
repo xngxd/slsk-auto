@@ -58,7 +58,7 @@ def read_csv():
 def write_csv(rows):
     tmp = str(WATCHLIST_PATH) + '.tmp'
     with open(tmp, 'w', newline='') as f:
-        w = csv.DictWriter(f, fieldnames=CSV_FIELDS)
+        w = csv.DictWriter(f, fieldnames=CSV_FIELDS, extrasaction='ignore')
         w.writeheader()
         w.writerows(rows)
     os.replace(tmp, WATCHLIST_PATH)
@@ -98,31 +98,20 @@ def folder_state(folder_path):
     return None
 
 def reconcile_rows(rows, staging):
-    """Scan staging/tmp and update in_progress/completed statuses from filesystem."""
-    tmp_dir = staging / 'tmp'
-    if not tmp_dir.is_dir():
-        return rows
-    tmp_folders = {d.name.lower(): d for d in tmp_dir.iterdir()
-                   if d.is_dir() and not d.name.startswith('.')}
+    """Refresh in_progress/completed status from the filesystem state of tmp_path.
+    Fuzzy folder discovery is download.sh's job; this only updates rows that
+    already have a tmp_path pointing to a real directory."""
     updated = []
     for row in rows:
         if row['status'] in ('completed', 'verified'):
             updated.append(row)
             continue
-        # Try to find a matching tmp folder
-        entry_lower = row['entry'].lower()
-        words = [w for w in entry_lower.split() if len(w) > 3]
-        match = None
-        for name, folder in tmp_folders.items():
-            if any(w in name for w in words):
-                match = folder
-                break
-        if match:
-            state = folder_state(match)
+        tp = row.get('tmp_path', '')
+        if tp and Path(tp).is_dir():
+            state = folder_state(tp)
             if state and row['status'] in ('not_started', 'in_progress', 'failed', ''):
                 row = dict(row)
                 row['status'] = state
-                row['tmp_path'] = str(match)
         updated.append(row)
     return updated
 
@@ -301,10 +290,12 @@ def _is_running():
     return _proc is not None and _proc.poll() is None
 
 def _external_script():
-    for script in ("sync.sh", "download.sh", "copy.sh", "verify.sh", "cleanup.sh", "reconcile_device.sh"):
+    for pat in _SCRIPT_PATTERNS:
+        if not pat.endswith('.sh'):
+            continue
         try:
-            subprocess.check_output(["pgrep", "-f", script], text=True)
-            return script.replace(".sh", "")
+            subprocess.check_output(["pgrep", "-f", pat], text=True)
+            return pat.replace(".sh", "")
         except subprocess.CalledProcessError:
             pass
     return None
