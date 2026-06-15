@@ -215,6 +215,19 @@
     .log-empty { color: var(--muted); font-size: 11px; font-family: var(--mono); }
     .log-empty::before { content: '$ '; }
 
+    #page-act { position: relative; }
+    #log-jump {
+      position: absolute; bottom: 14px; right: 14px;
+      background: var(--text); color: var(--bg);
+      border: none; border-radius: 0;
+      font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 6px 10px; font-family: inherit; cursor: pointer;
+      opacity: 0; pointer-events: none;
+      transition: opacity .15s;
+    }
+    #log-jump.visible { opacity: 1; pointer-events: auto; }
+    #log-jump:hover { background: var(--blue); }
+
     /* ── Library page ── */
     .lib-toolbar {
       display: flex; align-items: center; gap: 10px;
@@ -366,6 +379,7 @@
     <!-- Activity -->
     <div class="page" id="page-act">
       <div id="log"><span class="log-empty">Run download or sync to see activity.</span></div>
+      <button id="log-jump" onclick="scrollLogToBottom()">↓ Latest</button>
     </div>
 
     <!-- Library -->
@@ -400,6 +414,17 @@
 <script>
   const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   let es = null;
+
+  function scrollLogToBottom() {
+    const log = document.getElementById('log');
+    log.scrollTop = log.scrollHeight;
+  }
+  function updateLogJump() {
+    const log = document.getElementById('log');
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+    document.getElementById('log-jump').classList.toggle('visible', !atBottom);
+  }
+  document.getElementById('log').addEventListener('scroll', updateLogJump);
   let heroExpanded = false;
   let lastInProgress = [];
 
@@ -616,8 +641,10 @@
     const s = document.createElement('span');
     s.className = 'll ' + classifyLine(text);
     s.textContent = text;
+    const wasAtBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
     log.appendChild(s);
-    log.scrollTop = log.scrollHeight;
+    if (wasAtBottom) log.scrollTop = log.scrollHeight;
+    updateLogJump();
   }
 
   // ── Library + vertical blur ────────────────────
@@ -646,6 +673,8 @@
     row.classList.add('alb-open');
 
     const data = await api(`/api/tracklist?folder=${encodeURIComponent(album.path)}`);
+    // Another album was tapped while this fetch was in flight — bail
+    if (expandedAlbumRow !== row) return;
     if (data.error || !data.tracks) { expandedAlbumRow = null; row.classList.remove('alb-open'); return; }
 
     const panel = document.createElement('div');
@@ -779,7 +808,7 @@
     const maxScroll = list.scrollHeight - list.clientHeight;
     const frac = maxScroll > 0 ? Math.min(1, list.scrollTop / maxScroll) : 0;
     const focalY = listRect.top + frac * listRect.height;
-    const sharpRadius = 130;
+    const sharpRadius = 200;
     items.forEach(el => {
       const itemRect = el.getBoundingClientRect();
       const itemCenter = itemRect.top + itemRect.height / 2;
