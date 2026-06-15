@@ -1,6 +1,10 @@
-# slsk-auto
+# NO DOWNLOADS REFUSED (slsk-auto)
 
-Automates the Soulseek album download pipeline: watchlist → download → rename → copy to Surfans F20.
+A sleazy little app to manage a music library and source albums from Soulseek. Because unlike that ad says — I would download a car.
+
+Automates the full pipeline: watchlist → download via sldl → rename from ID3 tags → copy to Surfans F20 DAP.
+
+Work items and roadmap live in `TODO.md`.
 
 ## Pipeline
 
@@ -84,8 +88,16 @@ Relevant frame IDs:
 
 | File | Purpose |
 |---|---|
-| `sync.sh` | Main entrypoint: download → prep → sync → mark done |
+| `web.py` | Flask backend (port 5001) — API + SSE stream |
+| `sync.sh` | Full pipeline: download → prep → copy |
+| `download.sh` | Download pending/failed, verify track counts |
+| `verify.sh` | Standalone verify against MusicBrainz |
+| `copy.sh` | prep.sh → rsync to device |
 | `prep.sh` | Rename folders from ID3 tags, strip .lrc files |
+| `lib.sh` | Shared bash helpers (config, CSV, MusicBrainz, audio count) |
+| `watchlist.csv` | Album queue: entry, tmp_path, status, verified, fail_reason |
 | `config.toml` | Credentials + paths (gitignored) |
 | `config.toml.example` | Template to copy |
-| `watchlist.txt` | Symlink to iCloud Drive watchlist |
+| `templates/index.html` | Frontend SPA |
+| `artwork/` | Cached cover art (keyed by sanitized folder name) |
+| `logs/` | Per-run logs from all scripts |

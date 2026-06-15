@@ -1,2 +1,8 @@
 config.toml
 *.lrc
+__pycache__/
+*.pyc
+.DS_Store
+artwork/
+logs/
+staging = "/
