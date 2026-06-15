@@ -23,21 +23,21 @@ Display `fail_reason` from API on failed queue items.
 ## Queued — Small Features
 
 ### [backend] Track name linter / .incomplete guard
-- [ ] Define canonical folder name format: `Artist - Album` (already enforced by prep.sh)
-- [ ] Define canonical track name format: `NN Title.ext` or `Artist - Album - NN Title.ext` — pick one and enforce
-- [ ] In `copy.sh` / rsync: exclude `*.incomplete` files so they never land on the device
-- [ ] In `download.sh`: detect folders containing `.incomplete` files after sldl exits, mark those entries `status=failed`, `fail_reason=incomplete files present`
-- [ ] In `prep.sh`: warn and skip (don't rename) folders with `.incomplete` files
+- [x] Define canonical folder name format: `Artist - Album` (enforced by prep.sh)
+- [ ] Define canonical track name format: `NN Title.ext` — pick one and enforce (deferred: risky/complex)
+- [x] In `copy.sh` / rsync: exclude `*.incomplete` files so they never land on the device
+- [x] In `download.sh`: detect `.incomplete` files after sldl exits, mark `status=failed`, `fail_reason=.incomplete files remain`
+- [x] In `prep.sh`: skip (don't rename) folders with `.incomplete` files
 
 ### [ux] Track name linter feedback
 - [ ] Surface any `.incomplete` or format-mismatch items in the UI (probably Queue tab, failed bucket)
 
 ### [backend] Cleanup endpoint
-New `/api/cleanup` (POST) that runs a cleanup script:
-- [ ] Delete all FLAC files from staging (we prefer MP3; FLACs are dead weight on FAT32)
-- [ ] Run verify logic (same as `verify.sh`) as part of cleanup
-- [ ] Prune staging folders with no match in `watchlist.csv` (orphaned downloads)
-- [ ] Return a summary: `{flacs_deleted, folders_pruned, verified, mismatched}`
+New `/api/cleanup` (POST) that runs `cleanup.sh`:
+- [x] Delete all FLAC files from staging (we prefer MP3; FLACs are dead weight on FAT32)
+- [x] Move orphaned staging folders (no CSV match) to `staging/orphaned/` — not auto-deleted
+- [x] Print summary line `CLEANUP DONE flacs_deleted=N orphans_moved=N` for UI to parse
+- [ ] Run verify as part of cleanup (deferred — verify is already a separate button)
 
 ### [ux] Cleanup button
 - [ ] Add "Cleanup" button to the footer action bar
@@ -46,9 +46,9 @@ New `/api/cleanup` (POST) that runs a cleanup script:
 
 ### [backend] Sync selector — per-album device flag
 Lightweight iTunes: decide which albums actually get copied to the Surfans F20.
-- [ ] Add `sync` column to `CSV_FIELDS` (values: `yes` / `no` / `''` defaulting to yes)
-- [ ] New `/api/watchlist/<entry>/sync` (PATCH) to toggle the flag
-- [ ] Update `copy.sh` to only rsync folders whose CSV entry has `sync != 'no'`
+- [x] Add `sync` column to `CSV_FIELDS` (values: `yes` / `no` / `''` defaulting to yes)
+- [x] `PATCH /api/watchlist/sync` to toggle the flag per entry
+- [x] `copy.sh` builds rsync exclude list from entries with `sync=no`
 
 ### [ux] Sync selector UI
 - [ ] Per-album toggle in Library tab (on/off → synced/excluded)
@@ -57,9 +57,9 @@ Lightweight iTunes: decide which albums actually get copied to the Surfans F20.
 
 ### [backend] Device reconciliation script
 Clean up the Surfans F20 to match what's currently in staging.
-- [ ] Script (or `/api/reconcile-device`) that diffs device contents against staging
-- [ ] Remove albums from device that are no longer in staging or are marked `sync=no`
-- [ ] Dry-run mode first, confirm before delete
+- [x] `GET /api/reconcile-device` — dry-run diff, returns `{to_remove: [{name, path, tracks}], count}`
+- [x] `POST /api/reconcile-device` — runs `reconcile_device.sh`, removes orphaned device folders
+- [x] `reconcile_device.sh` skips entries with `sync=no` and any untracked staging folders
 
 ### [ux] Device reconciliation UI
 - [ ] "Reconcile device" button in Library tab (only active when device is mounted)
