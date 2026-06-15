@@ -561,6 +561,17 @@ def api_cleanup():
 def api_reconcile_device_run():
     return jsonify({"ok": True}) if _start_script("reconcile_device") else (jsonify({"error": "already running"}), 400)
 
+@app.route("/api/eject", methods=["POST"])
+def api_eject():
+    import subprocess
+    _, dev = get_paths()
+    if not dev.is_dir():
+        return jsonify({"error": "device not mounted"}), 404
+    result = subprocess.run(["diskutil", "eject", str(dev)], capture_output=True, text=True)
+    if result.returncode == 0:
+        return jsonify({"ok": True})
+    return jsonify({"error": result.stderr.strip() or "eject failed"}), 500
+
 @app.route("/api/logs")
 def api_logs():
     logs = sorted(LOGS_DIR.glob("*.log"), reverse=True)[:20]

@@ -92,6 +92,7 @@ Relevant frame IDs:
 | `sync.sh` | Full pipeline: download → prep → copy |
 | `download.sh` | Download pending/failed, verify track counts |
 | `verify.sh` | Standalone verify against MusicBrainz |
+| `import_device.sh` | One-time import: scan device mount, add untracked albums to watchlist as verified |
 | `copy.sh` | prep.sh → rsync to device |
 | `prep.sh` | Rename folders from ID3 tags, strip .lrc files |
 | `lib.sh` | Shared bash helpers (config, CSV, MusicBrainz, audio count) |

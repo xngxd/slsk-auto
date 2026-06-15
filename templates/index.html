@@ -51,6 +51,13 @@
     .logo { font-family: Helvetica, Arial, sans-serif; font-weight: 900; font-size: 48px; letter-spacing: -0.03em; text-transform: uppercase; color: var(--text); line-height: 0.95; }
     .device-label { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; }
     .device-label.on { color: var(--text); }
+    .device-row { display: flex; align-items: center; gap: 8px; }
+    .eject-btn {
+      display: none; background: none; border: none; padding: 0; cursor: pointer;
+      font-size: 13px; color: var(--muted); line-height: 1; opacity: 0.6;
+    }
+    .eject-btn:hover { opacity: 1; color: var(--text); }
+    .eject-btn.visible { display: inline-block; }
     .hdr-spacer { flex: 1; }
     .hdr-btns { display: flex; gap: 5px; align-self: flex-start; padding-top: 4px; }
     .hdr-btn {
@@ -354,7 +361,10 @@
     <div class="topbar">
       <div class="topbar-identity">
         <div class="logo">NO DOWNLOADS<br>REFUSED</div>
-        <div id="device-label" class="device-label">checking…</div>
+        <div class="device-row">
+          <div id="device-label" class="device-label">checking…</div>
+          <button class="eject-btn" id="eject-btn" title="Eject device" onclick="ejectDevice()">⏏</button>
+        </div>
       </div>
     </div>
 
@@ -458,6 +468,7 @@
     const lbl = document.getElementById('device-label');
     lbl.className = s.device_mounted ? 'device-label on' : 'device-label';
     lbl.textContent = s.device_mounted ? `laptop connected to ${s.device_name}` : 'no device';
+    document.getElementById('eject-btn').classList.toggle('visible', !!s.device_mounted);
     const storageLbl = document.getElementById('lib-storage');
     if (storageLbl) {
       storageLbl.textContent = (s.device_mounted && s.device_free_gb != null)
@@ -480,6 +491,20 @@
     const status = document.getElementById('footer-status');
     status.textContent = on ? (labels[script] || 'running…') : 'idle';
     status.style.color = on ? '#666' : '#3a3a3a';
+  }
+
+  // ── Eject ─────────────────────────────────────
+  async function ejectDevice() {
+    const btn = document.getElementById('eject-btn');
+    btn.style.opacity = '0.3';
+    const r = await api('/api/eject', { method: 'POST' });
+    btn.style.opacity = '';
+    if (r.error) { alert(r.error); return; }
+    document.getElementById('device-label').textContent = 'no device';
+    document.getElementById('device-label').className = 'device-label';
+    btn.classList.remove('visible');
+    const storageLbl = document.getElementById('lib-storage');
+    if (storageLbl) storageLbl.textContent = '';
   }
 
   // ── Run / Stop ────────────────────────────────

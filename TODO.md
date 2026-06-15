@@ -106,9 +106,8 @@ The log doesn't need to be a dark terminal anymore. It can be a light-on-light m
 
 ### [ux] Favicon / identity mark
 
-- [ ] Create `static/favicon.svg`: black `NDR` on white 32×32 — or a black square with
-      white `↓` arrow. Decide: wordmark vs glyph.
-- [ ] Wire it up in `<head>` of `index.html`
+- [x] Create `static/favicon.svg`: black square, white `N` glyph
+- [x] Wire it up in `<head>` of `index.html`
 
 ---
 
@@ -116,26 +115,48 @@ The log doesn't need to be a dark terminal anymore. It can be a light-on-light m
 
 ### [backend] In Rainbows — bad partial download marked verified
 
-`In Rainbows (2007) — Radiohead` is in the CSV as `completed/verified` but is actually a
-corrupt 2-track partial download. Evidence:
+`In Rainbows (2007) — Radiohead` was `completed/verified` in the CSV but was a corrupt
+2-track partial download with a .NET crash trace in `fail_reason`. CSV has been reset to
+`not_started`. Bad staging folder still needs manual deletion:
+```
+rm -rf ~/Music/slsk-staging/tmp/"In Rainbows (2007) [mp3]"
+```
+- [x] Reset CSV to `not_started`, cleared `tmp_path` and `fail_reason`
+- [ ] Delete bad staging folder (manual — see above)
+- [ ] Re-download will happen on next run
 
-- Folder name: `In Rainbows (2007) [mp3]` — junk `[mp3]` suffix never stripped by `prep.sh`
-- Only 2 tracks on device (should be 10)
-- `fail_reason` in CSV contains a .NET crash stacktrace — the reconciler recovered it after
-  a sldl crash and incorrectly promoted it to `completed/verified`
-- No artist tag (`_` shown in Library)
+### [backend] Reconciler must not verify entries with non-empty fail_reason
 
-Immediate fix (manual):
-- [ ] Reset CSV entry to `not_started`, clear `tmp_path` and `fail_reason`
-- [ ] Delete the bad folder from staging: `In Rainbows (2007) [mp3]`
-- [ ] Delete from device and re-download clean
+When the reconciler recovers a crashed entry and promotes it to `completed`, it should check
+whether `fail_reason` is set. A non-empty `fail_reason` means the download did not succeed
+cleanly — it must not be marked `verified` regardless of whether a folder was found.
 
-Systemic fix (Bastian):
-- [ ] The reconciler should not mark an entry `verified` if `fail_reason` is non-empty
-- [ ] `prep.sh` should strip `[mp3]` / `[FLAC]` / `[320]` bracket tags from folder names —
-      these are common sldl artifacts and they pollute the library
-- [ ] Verify step should catch 2-track vs 10-track mismatch — if it passed verify, the
-      MusicBrainz track count lookup may have failed silently and defaulted to pass
+- [ ] In `download.sh` Phase 0 reconciler: after setting `status=completed`, if `fail_reason`
+      is non-empty, set `verified=unverified` (not `verified`) and log a warning
+- [ ] Add a test case: entry with fail_reason + matching folder → should land as
+      `completed/unverified`, not `completed/verified`
+
+### [backend] prep.sh — strip format bracket tags from folder names
+
+sldl frequently appends `[mp3]`, `[FLAC]`, `[320]`, `[V0]` etc. to downloaded folder names.
+These pollute the library and break the `Artist - Album` naming convention.
+
+- [ ] In `prep.sh`, after reading the folder name and before renaming: strip any trailing
+      `[...]` bracket group that matches a known format token (mp3, flac, 320, 256, 128,
+      V0, V2, CBR, etc.) — case-insensitive
+- [ ] Add test cases to `test_prep.sh` covering `[mp3]`, `[FLAC 320]`, `[V0]` variants
+- [ ] Confirm that legitimate brackets in real album names (e.g. `(2007) [Remaster]`) are
+      not stripped — only format-codec tokens should be targeted
+
+### [backend] verify.sh — silent pass when MusicBrainz lookup fails
+
+In Rainbows passed verify with only 2 tracks against a known 10-track album. The MusicBrainz
+lookup either returned 0 or failed silently and the track count check defaulted to pass.
+
+- [ ] In `verify.sh` / `lib.sh`: if the MusicBrainz API returns 0 tracks or an error,
+      log a warning and mark the entry `unverified` — do NOT count it as a pass
+- [ ] `track_variance()` tolerance check: 2 vs 10 is well outside `max(2, n/5)` — confirm
+      this is actually being evaluated and not short-circuiting on a bad API response
 
 ### [backend] "Folder not found — skipping" for completed entries
 
@@ -263,6 +284,12 @@ The big title in the Queue hero is just the raw entry name of the first in-progr
 
 ## Queued — Small Features
 
+### [backend] Import device albums into watchlist — import_device.sh
+Albums on the Surfans F20 before this project started are invisible to the app (not in watchlist.csv).
+- [x] `import_device.sh` — scans device mount, adds untracked folders as `status=verified, verified=verified, sync=yes`
+- [ ] **TEST**: plug in Surfans, run `./import_device.sh`, confirm pre-existing albums appear in Queue tab as verified
+- [ ] After import, check for any `entry` values that don't match `Artist - Album` format (e.g. bare album names, various-artists folders) and clean up manually
+
 ### [backend] Track name linter / .incomplete guard
 - [x] Define canonical folder name format: `Artist - Album` (enforced by prep.sh)
 - [ ] Define canonical track name format: `NN Title.ext` — pick one and enforce (deferred: risky/complex)
@@ -307,6 +334,25 @@ Clean up the Surfans F20 to match what's currently in staging.
 - [ ] "Reconcile device" button in Library tab (only active when device is mounted)
 - [ ] Show diff preview before confirming
 
+### [ux] Eject device button
+- [x] `POST /api/eject` — runs `diskutil eject` on device mount point, returns 404 if not mounted
+- [x] ⏏ button next to device label in topbar — hidden when no device, dims during eject, hides on success, shows error alert on failure
+
+### [ux] Library storage display
+- [x] `/api/status` now returns `device_free_gb` + `device_total_gb` via `shutil.disk_usage`
+- [x] Library toolbar shows "X.X GB free of Y.Y GB" next to the source tag
+
+### [ux] Topbar UX polish
+- [x] Logo scroll-collapse: `.topbar-identity` fades + collapses to zero height when any panel scrolls past 20px; restores on scroll back
+- [x] Device label wording: "laptop connected to \<device name\>" when mounted, "no device" otherwise
+- [x] Removed topbar DL/Copy/Stop buttons (footer-only now)
+- [x] Activity log: `touch-action: pan-y; overflow-x: hidden; word-break: break-all` — no horizontal scroll on mobile
+
+### [ux] Tracklist double-render fix
+- [x] Per-row `_loading` flag prevents concurrent fetches on rapid taps
+- [x] Post-await guard (`expandedAlbumRow !== row`) discards stale responses
+- [x] Stale panel cleanup before insertion covers any remaining edge cases
+
 ---
 
 ## Queued — Backend Bugs (from QA handoff)
@@ -329,7 +375,7 @@ Last run crashed mid-batch. In Rainbows, channel ORANGE, Nymph, Alias, Stretch 2
 ### [backend] Reconciler lives in two places — keep in sync
 The Phase 0 Python reconciler is an inline heredoc in `download.sh`. `test_reconciler.py` mirrors it manually.
 - [x] `test_reconciler.py` updated to mirror `tokenize()`/`tokens_match()` — also added dedicated `tokenize` and `tokens_match` test suites including false-positive regression
-- [ ] Consider extracting to a standalone `reconcile.py` so there's one source of truth
+- [ ] Consider extracting to a standalone `reconcile.py` so there's one source of truth (low priority — heredoc + test coverage is working fine)
 
 ### [backend] `mb_track_count` fails when album name includes year — lib.sh
 `mb_track_count "Janet Jackson" "janet. (1993)"` returned no results because MB titles never include the year disambiguation we append. Same bug hits every year-suffixed entry.
