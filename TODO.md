@@ -6,6 +6,21 @@ Shared work tracking for backend and UX agents. Update status inline as work pro
 
 ## In Progress
 
+### [backend] Kill / restart / reload
+Kill hanging processes, restart Flask, reload the UI.
+- [x] `GET /api/processes` — list running script + sldl PIDs
+- [x] `POST /api/kill` — kill all hanging processes (managed _proc + pkill scripts + sldl), clear queue
+- [x] `POST /api/restart` — kill all, then `os.execv` to restart Flask; sends `{t:'restart'}` SSE event first so client knows to reconnect
+- [x] SSE `generate()` handles dict items in queue — structured events (`{t:'restart'}`) pass through as-is instead of being wrapped in `{t:'log'}`
+
+### [ux] Restart button + client-side reconnect
+- [ ] "Restart" button in footer (or settings panel) — calls `POST /api/restart`
+- [ ] On `{t:'restart'}` SSE event OR after the POST responds: show "restarting…" state, poll `GET /api/status` every 500ms for up to 15s
+- [ ] When poll succeeds (server back up), `window.location.reload()`
+- [ ] `GET /api/processes` can power a "hanging processes" indicator before the kill button
+
+
+
 ### [backend] fail_reason capture
 Capture the last meaningful sldl output line on failure → `fail_reason` column in CSV.
 - [x] Add `fail_reason` to `CSV_FIELDS` in `web.py`

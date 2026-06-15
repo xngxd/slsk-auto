@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import csv, json, os, queue, re, struct, subprocess, threading, urllib.parse, urllib.request
+import csv, json, os, queue, re, struct, subprocess, sys, threading, time, urllib.parse, urllib.request
 from datetime import datetime
 from pathlib import Path
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
@@ -561,6 +561,39 @@ def api_log_file(name):
         return jsonify({"error": "not found"}), 404
     return Response(p.read_text(), mimetype="text/plain")
 
+_SCRIPT_PATTERNS = (
+    'sldl', 'download.sh', 'sync.sh', 'copy.sh',
+    'verify.sh', 'cleanup.sh', 'reconcile_device.sh',
+)
+
+def _kill_all():
+    global _proc, _proc_name
+    with _proc_lock:
+        if _is_running():
+            try: _proc.terminate()
+            except Exception: pass
+        _proc = None
+        _proc_name = None
+    for pat in _SCRIPT_PATTERNS:
+        try: subprocess.run(['pkill', '-f', pat], check=False)
+        except Exception: pass
+
+
+@app.route("/api/processes")
+def api_processes():
+    procs = []
+    for pat in _SCRIPT_PATTERNS:
+        try:
+            pids = subprocess.check_output(['pgrep', '-f', pat], text=True).split()
+            for pid in pids:
+                procs.append({"pid": pid, "name": pat})
+        except subprocess.CalledProcessError:
+            pass
+    if _is_running():
+        procs.append({"pid": str(_proc.pid), "name": _proc_name or "managed"})
+    return jsonify({"processes": procs, "count": len(procs)})
+
+
 @app.route("/api/stop", methods=["POST"])
 def api_stop():
     with _proc_lock:
@@ -568,6 +601,27 @@ def api_stop():
             _proc.terminate()
             return jsonify({"ok": True})
     return jsonify({"error": "not running"}), 400
+
+
+@app.route("/api/kill", methods=["POST"])
+def api_kill():
+    _kill_all()
+    while not _output_queue.empty():
+        try: _output_queue.get_nowait()
+        except queue.Empty: break
+    return jsonify({"ok": True})
+
+
+@app.route("/api/restart", methods=["POST"])
+def api_restart():
+    def _do_restart():
+        time.sleep(0.5)
+        _kill_all()
+        time.sleep(0.2)
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+    _output_queue.put({'t': 'restart'})
+    threading.Thread(target=_do_restart, daemon=False).start()
+    return jsonify({"ok": True})
 
 
 @app.route("/stream")
@@ -578,7 +632,12 @@ def stream():
                 msg = _output_queue.get(timeout=20)
                 if msg is None:
                     yield f"data: {json.dumps({'t': 'done'})}\n\n"; break
-                yield f"data: {json.dumps({'t': 'log', 'text': msg})}\n\n"
+                if isinstance(msg, dict):
+                    yield f"data: {json.dumps(msg)}\n\n"
+                    if msg.get('t') == 'restart':
+                        break
+                else:
+                    yield f"data: {json.dumps({'t': 'log', 'text': msg})}\n\n"
             except queue.Empty:
                 yield f"data: {json.dumps({'t': 'ping'})}\n\n"
     return Response(stream_with_context(generate()), mimetype="text/event-stream",
