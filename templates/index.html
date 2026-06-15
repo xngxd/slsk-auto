@@ -7,255 +7,407 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:       #0f1117;
-      --surface:  #1a1d27;
-      --surface2: #232736;
-      --border:   #2e3347;
-      --accent:   #7c6ff7;
-      --text:     #e2e4f0;
-      --muted:    #6b7094;
-      --green:    #4ade80;
-      --amber:    #fbbf24;
-      --red:      #f87171;
-      --blue:     #60a5fa;
-      --mono:     'SF Mono','Cascadia Code',Consolas,monospace;
+      --bg:     #0c0b16;
+      --card:   rgba(11, 10, 20, 0.88);
+      --surface:#13111f;
+      --border: #252340;
+      --text:   #f0edf8;
+      --muted:  #504c64;
+      --green:  #17f080;
+      --amber:  #f0a030;
+      --red:    #ff4455;
+      --pink:   #ff1f6d;
+      --purple: #9070f0;
+      --mono:   'SF Mono','Cascadia Code',Consolas,monospace;
     }
     body {
-      background: var(--bg); color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: 14px; height: 100dvh;
-      display: flex; flex-direction: column; overflow: hidden;
-      /* safe areas for notch / dynamic island / home bar */
+      background: var(--bg);
+      font-family: var(--mono);
+      font-size: 13px;
+      height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
       padding-top: env(safe-area-inset-top);
       padding-left: env(safe-area-inset-left);
       padding-right: env(safe-area-inset-right);
-      padding-bottom: env(safe-area-inset-bottom);
     }
 
-    /* ── Header ── */
-    header {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      padding: 10px 14px;
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
+    /* ── Score background — ghost staff lines ── */
+    .bg-score {
+      position: fixed; top: -8%; left: 50%;
+      transform: translateX(-50%);
+      width: 140%; pointer-events: none; z-index: 0;
+      opacity: 0.11; mix-blend-mode: screen;
+      filter: invert(1) blur(0.4px);
+      user-select: none; -webkit-user-select: none;
     }
-    .logo { font-weight: 700; font-size: 15px; letter-spacing: -.3px; color: var(--accent); }
-    .badge {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 12px; color: var(--muted);
-      padding: 3px 9px; border-radius: 20px; background: var(--surface2);
+
+    /* ── Shell ── */
+    .shell {
+      position: relative; z-index: 1;
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      padding: 10px 10px 0;
     }
-    .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
-    .badge.on .dot { background: var(--green); }
-    .badge.on { color: var(--text); }
+    .card {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      background: var(--card);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid var(--border); border-bottom: none;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 16px;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .logo {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .device-label { font-size: 10px; color: var(--muted); }
+    .device-label.on { color: var(--green); }
     .hdr-spacer { flex: 1; }
-    .hdr-btns { display: flex; gap: 6px; }
-    button {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 6px 12px; border-radius: 6px; border: none;
-      font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s;
-      white-space: nowrap;
+    .hdr-btns { display: flex; gap: 5px; }
+    .hdr-btn {
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 3px 9px; font-family: var(--mono);
+      transition: color .12s, border-color .12s;
     }
-    .btn-dl   { background: var(--accent); color: #fff; }
-    .btn-dl:hover { background: #6558e0; }
-    .btn-copy { background: var(--surface2); color: var(--blue); border: 1px solid var(--border); }
-    .btn-copy:hover { background: rgba(96,165,250,.12); }
-    .btn-stop { background: var(--surface2); color: var(--red); border: 1px solid var(--border); }
-    .btn-stop:hover { background: rgba(248,113,113,.12); }
-    button:disabled { opacity: .35; pointer-events: none; }
+    .hdr-btn:hover { color: var(--text); border-color: var(--muted); }
+    .hdr-btn.primary { color: var(--text); border-color: var(--muted); }
+    .hdr-btn.danger  { color: var(--pink); border-color: var(--pink); }
+    .hdr-btn:disabled { opacity: .2; pointer-events: none; }
 
     /* ── Tabs ── */
     .tabs {
-      display: flex; gap: 0;
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0; padding: 0 16px;
     }
     .tab {
-      padding: 9px 18px;
-      font-size: 13px; font-weight: 600; color: var(--muted);
+      padding: 10px 0; margin-right: 24px;
+      font-size: 9px; font-weight: 700; color: var(--muted);
+      letter-spacing: 0.14em; text-transform: uppercase;
       border-bottom: 2px solid transparent;
-      cursor: pointer; transition: color .15s, border-color .15s;
-      user-select: none;
+      cursor: pointer; transition: color .12s, border-color .12s;
+      user-select: none; position: relative;
     }
-    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab.active { color: var(--text); border-bottom-color: var(--pink); }
     .tab:hover:not(.active) { color: var(--text); }
+    .tab-dot {
+      display: none; width: 4px; height: 4px;
+      background: var(--pink); position: absolute; top: 8px; right: -7px;
+      animation: dot-pulse 1.4s ease-in-out infinite;
+    }
+    .tab-dot.visible { display: inline-block; }
 
     /* ── Tab pages ── */
     .page { flex: 1; display: none; overflow: hidden; }
     .page.active { display: flex; flex-direction: column; }
 
-    /* ── Queue page (two panels side by side) ── */
-    .queue-page { flex-direction: row !important; }
-    .panel { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
-    .panel:first-child { border-right: 1px solid var(--border); max-width: 300px; }
+    /* ── Animations ── */
+    @keyframes hero-glow {
+      0%, 100% { box-shadow: inset 0 0 0 1px rgba(255,31,109,0.12), inset 0 0 60px rgba(255,31,109,0.03); }
+      50%       { box-shadow: inset 0 0 0 1px rgba(255,31,109,0.35), inset 0 0 60px rgba(255,31,109,0.09); }
+    }
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.25; transform: scale(0.5); }
+    }
 
-    .panel-title {
-      padding: 9px 14px;
-      font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-      color: var(--muted); border-bottom: 1px solid var(--border); flex-shrink: 0;
-      display: flex; align-items: center; gap: 6px;
+    /* ── Hero ── */
+    .active-hero {
+      padding: 22px 16px 16px;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+      cursor: default; transition: background .3s;
+      user-select: none;
     }
-    .panel-title .spacer { flex: 1; }
-    .icon-btn {
-      background: none; border: none; color: var(--muted); padding: 1px 5px;
-      font-size: 14px; border-radius: 4px; cursor: pointer; line-height: 1;
+    .active-hero.live {
+      animation: hero-glow 2.2s ease-in-out infinite;
+      cursor: pointer;
     }
-    .icon-btn:hover { color: var(--text); background: var(--surface2); }
+    .hero-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .hero-label {
+      font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--muted); display: flex; align-items: center; gap: 8px;
+    }
+    .hero-live-dot {
+      width: 6px; height: 6px; background: var(--pink);
+      box-shadow: 0 0 10px rgba(255,31,109,0.8);
+      animation: dot-pulse 1.4s ease-in-out infinite; flex-shrink: 0;
+    }
+    .hero-chevron { font-size: 10px; color: var(--muted); transition: transform .2s; }
+    .hero-chevron.open { transform: rotate(180deg); }
+    .hero-title {
+      font-size: 38px; font-weight: 700; letter-spacing: -0.02em;
+      color: var(--text); line-height: 1.05; margin-top: 12px;
+      word-break: break-word;
+    }
+    .hero-subtitle { font-size: 10px; color: var(--pink); margin-top: 8px; letter-spacing: 0.05em; }
+    .hero-empty { color: var(--muted); font-size: 11px; margin-top: 12px; }
+    .hero-expanded { padding: 8px 0 2px; }
+    .hero-exp-item {
+      font-size: 11px; color: var(--muted); padding: 2px 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .hero-exp-item.primary { color: var(--text); }
 
-    /* Queue list */
-    #queue-list { flex: 1; overflow-y: auto; }
-    #queue-list::-webkit-scrollbar { width: 4px; }
-    #queue-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    /* ── Queue list ── */
+    #queue-list { flex: 1; overflow-y: auto; padding: 4px 0; }
+    #queue-list::-webkit-scrollbar { width: 2px; }
+    #queue-list::-webkit-scrollbar-thumb { background: var(--border); }
 
-    .group-header {
-      padding: 8px 14px 3px;
-      font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-      color: var(--muted); display: flex; align-items: center; gap: 5px;
+    .group-sep {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px 4px;
     }
-    .group-count {
-      background: var(--surface2); padding: 1px 6px; border-radius: 8px;
-      font-size: 10px; font-weight: 600;
+    .group-sep-line { flex: 1; height: 1px; background: var(--border); }
+    .group-sep-label {
+      font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
     }
+
     .q-item {
       display: flex; align-items: center; gap: 8px;
-      padding: 6px 14px; transition: background .1s;
+      padding: 7px 16px; transition: background .1s; cursor: default;
     }
-    .q-item:hover { background: var(--surface2); }
-    .q-dot { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; }
-    .q-label { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .q-meta { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+    .q-item:hover { background: rgba(255,255,255,0.02); }
+    .q-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .q-label {
+      font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      color: var(--text);
+    }
+    .q-label.muted   { color: var(--muted); }
+    .q-label.failed  { color: var(--red); }
+    .q-label.success { color: var(--green); }
+    .q-reason {
+      font-size: 10px; color: var(--red); opacity: 0.6;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .q-meta { font-size: 10px; color: var(--muted); flex-shrink: 0; }
     .q-del {
       opacity: 0; background: none; border: none; color: var(--muted);
-      font-size: 15px; line-height: 1; padding: 1px 5px; border-radius: 4px; cursor: pointer;
+      font-size: 16px; line-height: 1; padding: 1px 4px; cursor: pointer;
+      font-family: var(--mono);
     }
     .q-item:hover .q-del { opacity: 1; }
-    .q-del:hover { background: rgba(248,113,113,.15); color: var(--red); }
+    .q-del:hover { color: var(--red); }
+    button { cursor: pointer; }
+    button:disabled { opacity: .2; pointer-events: none; }
+    .q-empty { padding: 16px 16px; color: var(--muted); font-size: 11px; }
 
-    .dot-progress  { background: var(--blue); box-shadow: 0 0 0 2px rgba(96,165,250,.2); animation: pulse 1.4s infinite; }
-    .dot-pending   { background: var(--muted); }
-    .dot-unverified{ background: var(--amber); }
-    .dot-failed    { background: var(--red); }
-    .dot-verified  { background: var(--green); }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-
-    .q-empty { padding: 14px; color: var(--muted); font-style: italic; font-size: 13px; }
-
-    /* Add form */
+    /* ── Add form ── */
     .add-form {
-      display: flex; gap: 6px; padding: 10px;
+      display: flex; align-items: center;
+      padding: 10px 16px;
       border-top: 1px solid var(--border); flex-shrink: 0;
     }
     .add-form input {
-      flex: 1; background: var(--surface2); border: 1px solid var(--border);
-      color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 13px; outline: none;
+      flex: 1; background: transparent; border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--text); padding: 5px 0; font-size: 12px; outline: none;
+      font-family: var(--mono);
     }
-    .add-form input:focus { border-color: var(--accent); }
+    .add-form input:focus { border-bottom-color: var(--pink); }
     .add-form input::placeholder { color: var(--muted); }
-    .add-form button { background: var(--surface2); border: 1px solid var(--border); color: var(--accent); padding: 6px 12px; }
-    .add-form button:hover { background: rgba(124,111,247,.15); border-color: var(--accent); }
-
-    /* Activity log */
-    #log {
-      flex: 1; overflow-y: auto; padding: 10px 14px;
-      font-family: var(--mono); font-size: 12px; line-height: 1.8;
+    .add-form button {
+      background: none; border: none; padding: 5px 0 5px 12px;
+      font-size: 22px; color: var(--muted); line-height: 1;
+      transition: color .12s; font-family: var(--mono);
     }
-    #log::-webkit-scrollbar { width: 4px; }
-    #log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .add-form button:hover { color: var(--pink); }
+
+    /* ── Activity page ── */
+    #log {
+      flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px;
+      font-family: var(--mono); font-size: 11px; line-height: 1.95;
+      color: var(--text); background: var(--surface);
+    }
+    #log::-webkit-scrollbar { width: 2px; }
+    #log::-webkit-scrollbar-thumb { background: var(--border); }
     .ll { display: block; }
-    .ll.hdr  { color: var(--accent); font-weight: 700; margin-top: 8px; }
-    .ll.sec  { color: var(--text); font-weight: 600; }
+    .ll.hdr  { color: var(--text); font-weight: 700; margin-top: 8px; }
+    .ll.sec  { color: var(--purple); }
     .ll.ok   { color: var(--green); }
     .ll.warn { color: var(--amber); }
     .ll.err  { color: var(--red); }
-    .ll.mb   { color: var(--muted); font-style: italic; }
+    .ll.mb   { color: var(--muted); }
     .ll.done { color: var(--green); font-weight: 700; }
-    .log-empty { color: var(--muted); font-style: italic; font-size: 13px; font-family: inherit; }
+    .log-empty { color: var(--muted); font-size: 11px; font-family: inherit; }
 
     /* ── Library page ── */
-    .lib-page { padding: 14px; overflow-y: auto; flex-wrap: wrap; align-content: flex-start; gap: 10px; }
-    .lib-page::-webkit-scrollbar { width: 4px; }
-    .lib-page::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
     .lib-toolbar {
-      width: 100%; display: flex; align-items: center; gap: 8px;
-      margin-bottom: 4px; flex-shrink: 0;
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
     }
     .lib-tag {
-      background: var(--surface2); color: var(--text);
-      font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px;
+      font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
     }
-    .lib-count { font-size: 12px; color: var(--muted); }
-    .alb {
-      width: calc(33.333% - 7px);
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px; transition: border-color .15s; cursor: default;
+    .lib-count {
+      font-size: 22px; font-weight: 700; letter-spacing: -0.03em; color: var(--text);
     }
-    @media (max-width: 500px) { .alb { width: calc(50% - 5px); } }
-    @media (min-width: 900px) { .alb { width: calc(20% - 8px); } }
-    .alb:hover { border-color: var(--accent); }
-    .alb-artist { font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 3px; }
-    .alb-name   { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 6px; }
-    .alb-count  { font-size: 10px; color: var(--muted); }
+    .lib-refresh {
+      background: none; border: none; color: var(--muted); font-size: 14px;
+      padding: 2px 4px; line-height: 1; transition: color .12s; font-family: var(--mono);
+    }
+    .lib-refresh:hover { color: var(--text); }
 
-    /* Running indicator in tab bar */
-    .tab-badge {
-      display: inline-block; width: 6px; height: 6px; border-radius: 50%;
-      background: var(--blue); margin-left: 5px; vertical-align: middle;
-      animation: pulse 1.4s infinite;
+    #lib-list { flex: 1; overflow-y: auto; }
+    #lib-list::-webkit-scrollbar { width: 2px; }
+    #lib-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+    .alb {
+      display: flex; align-items: center; gap: 14px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background .1s;
     }
+    .alb:hover { background: rgba(255,255,255,0.025); }
+    .alb.alb-open { background: rgba(255,31,109,0.06); border-bottom-color: transparent; }
+    .alb-tracks {
+      padding: 2px 16px 12px 86px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,31,109,0.03);
+    }
+    .trk-item {
+      display: flex; align-items: baseline; gap: 10px;
+      padding: 3px 0; font-size: 11px;
+    }
+    .trk-num {
+      color: var(--muted); font-variant-numeric: tabular-nums;
+      min-width: 18px; text-align: right; font-size: 10px; flex-shrink: 0;
+    }
+    .trk-title { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .trk-dur { color: var(--muted); font-size: 10px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+    .alb-art {
+      width: 56px; height: 56px; flex-shrink: 0;
+      background: var(--border); object-fit: cover;
+      box-shadow: 4px 4px 0 rgba(255,31,109,0.35);
+    }
+    .alb-art-ph {
+      width: 56px; height: 56px; flex-shrink: 0;
+      background: var(--surface);
+      box-shadow: 4px 4px 0 rgba(255,31,109,0.35);
+    }
+    .alb-info { flex: 1; min-width: 0; }
+    .alb-artist {
+      font-size: 9px; color: var(--muted); letter-spacing: 0.08em;
+      text-transform: uppercase; margin-bottom: 4px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .alb-name {
+      font-size: 19px; font-weight: 700; letter-spacing: -0.02em; color: var(--text);
+      line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .alb-count { font-size: 10px; color: var(--muted); flex-shrink: 0; }
+
+    /* ── Footer bar ── */
+    footer {
+      background: #000; color: #fff;
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+      flex-shrink: 0; position: relative; z-index: 2;
+      border-top: 1px solid var(--pink);
+    }
+    #footer-status {
+      flex: 1; font-size: 9px; color: #3a3a3a;
+      letter-spacing: 0.12em; text-transform: uppercase;
+    }
+    .footer-btns { display: flex; gap: 5px; }
+    .footer-btn {
+      background: none; color: #444; border: 1px solid #1e1e1e;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 5px 13px; font-family: var(--mono);
+      transition: background .12s, color .12s, border-color .12s;
+    }
+    .footer-btn:hover { color: #fff; border-color: #444; }
+    .footer-btn.primary { color: #ccc; border-color: #333; }
+    .footer-btn.primary:hover { background: var(--pink); border-color: var(--pink); color: #fff; }
+    .footer-btn.danger { color: var(--pink); border-color: #330015; }
+    .footer-btn.danger:hover { background: rgba(255,31,109,.1); }
   </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">slsk-auto</div>
-  <div id="device-badge" class="badge"><div class="dot"></div><span>checking…</span></div>
-  <div class="hdr-spacer"></div>
-  <div class="hdr-btns">
-    <button class="btn-dl"   id="btn-dl"   onclick="run('download')">↓ Download</button>
-    <button class="btn-copy" id="btn-copy" onclick="run('copy')">→ Copy</button>
-    <button class="btn-stop" id="btn-stop" onclick="doStop()" disabled>■ Stop</button>
-  </div>
-</header>
+<img class="bg-score" src="/static/score.jpg" alt="">
 
-<div class="tabs">
-  <div class="tab active" onclick="showTab('queue')" id="tab-queue">Queue<span id="tab-badge" class="tab-badge" style="display:none"></span></div>
-  <div class="tab"        onclick="showTab('lib')"   id="tab-lib">Library</div>
-</div>
+<div class="shell">
+  <div class="card">
 
-<!-- Queue tab -->
-<div class="page queue-page active" id="page-queue">
-  <div class="panel">
-    <div class="panel-title">
-      Queue
-      <div class="spacer"></div>
-      <button class="icon-btn" onclick="loadQueue()" title="Refresh">↻</button>
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="logo">slsk-auto</div>
+      <div id="device-label" class="device-label">checking…</div>
+      <div class="hdr-spacer"></div>
+      <div class="hdr-btns">
+        <button class="hdr-btn primary" id="hdr-dl"   onclick="run('download')">↓ DL</button>
+        <button class="hdr-btn"         id="hdr-copy" onclick="run('copy')">→ Copy</button>
+        <button class="hdr-btn danger"  id="hdr-stop" onclick="doStop()" disabled>■ Stop</button>
+      </div>
     </div>
-    <div id="queue-list"></div>
-    <form class="add-form" onsubmit="addAlbum(event)">
-      <input id="add-input" type="text" placeholder="Artist - Album" autocomplete="off">
-      <button type="submit">Add</button>
-    </form>
-  </div>
-  <div class="panel">
-    <div class="panel-title">Activity</div>
-    <div id="log"><span class="log-empty">Run download or sync to see activity.</span></div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('queue')" id="tab-queue">Queue</div>
+      <div class="tab" onclick="showTab('act')" id="tab-act">
+        Activity<span class="tab-dot" id="act-dot"></span>
+      </div>
+      <div class="tab" onclick="showTab('lib')" id="tab-lib">Library</div>
+    </div>
+
+    <!-- Queue -->
+    <div class="page active" id="page-queue">
+      <div class="active-hero" id="hero" onclick="toggleHeroExpand()">
+        <div class="hero-header">
+          <div class="hero-label">Now downloading</div>
+        </div>
+        <div class="hero-empty">Nothing downloading.</div>
+      </div>
+      <div id="queue-list"></div>
+      <form class="add-form" onsubmit="addAlbum(event)">
+        <input id="add-input" type="text" placeholder="Artist - Album" autocomplete="off">
+        <button type="submit" title="Add">+</button>
+      </form>
+    </div>
+
+    <!-- Activity -->
+    <div class="page" id="page-act">
+      <div id="log"><span class="log-empty">Run download or sync to see activity.</span></div>
+    </div>
+
+    <!-- Library -->
+    <div class="page" id="page-lib">
+      <div class="lib-toolbar">
+        <span id="lib-source" class="lib-tag"></span>
+        <div style="flex:1"></div>
+        <span id="lib-count" class="lib-count"></span>
+        <button class="lib-refresh" onclick="loadLibrary()">↻</button>
+      </div>
+      <div id="lib-list" onscroll="updateLibBlur()"></div>
+    </div>
+
   </div>
 </div>
 
-<!-- Library tab -->
-<div class="page lib-page" id="page-lib">
-  <div class="lib-toolbar">
-    <span id="lib-source" class="lib-tag"></span>
-    <span id="lib-count" class="lib-count"></span>
-    <div style="flex:1"></div>
-    <button class="icon-btn" onclick="loadLibrary()" title="Refresh">↻</button>
+<!-- Footer -->
+<footer>
+  <div id="footer-status">idle</div>
+  <div class="footer-btns">
+    <button class="footer-btn primary" id="btn-dl"     onclick="run('download')">↓ Download</button>
+    <button class="footer-btn"         id="btn-verify" onclick="run('verify')">✓ Verify</button>
+    <button class="footer-btn"         id="btn-copy"   onclick="run('copy')">→ Copy</button>
+    <button class="footer-btn danger"  id="btn-stop"   onclick="doStop()" disabled>■ Stop</button>
   </div>
-  <div id="lib-grid" style="width:100%;display:contents"></div>
-</div>
+</footer>
 
 <script>
   const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   let es = null;
+  let heroExpanded = false;
+  let lastInProgress = [];
 
   async function api(path, opts={}) {
     return fetch(path, { headers:{'Content-Type':'application/json'}, ...opts }).then(r=>r.json());
@@ -268,29 +420,34 @@
     document.getElementById('tab-' + name).classList.add('active');
     document.getElementById('page-' + name).classList.add('active');
     if (name === 'lib') loadLibrary();
+    if (name === 'act') {
+      document.getElementById('act-dot').classList.remove('visible');
+      if (!es) loadRecentLog();
+    }
   }
 
   // ── Status ────────────────────────────────────
   async function pollStatus() {
     const s = await api('/api/status');
-    const badge = document.getElementById('device-badge');
-    if (s.device_mounted) {
-      badge.className = 'badge on';
-      badge.innerHTML = `<div class="dot"></div><span>${esc(s.device_name)}</span>`;
-    } else {
-      badge.className = 'badge';
-      badge.innerHTML = `<div class="dot"></div><span>no device</span>`;
-    }
+    const lbl = document.getElementById('device-label');
+    lbl.className = s.device_mounted ? 'device-label on' : 'device-label';
+    lbl.textContent = s.device_mounted ? s.device_name : 'no device';
     setRunning(s.running, s.running_script);
-    if (s.running) loadQueue();
+    if (s.running) {
+      loadQueue();
+      if (!es) connectStream();
+    }
   }
 
   function setRunning(on, script) {
-    document.getElementById('btn-dl').disabled   = on;
-    document.getElementById('btn-copy').disabled = on;
-    document.getElementById('btn-stop').disabled = !on;
-    const tb = document.getElementById('tab-badge');
-    tb.style.display = on ? 'inline-block' : 'none';
+    ['btn-dl','hdr-dl'].forEach(id => document.getElementById(id).disabled = on);
+    ['btn-copy','hdr-copy'].forEach(id => document.getElementById(id).disabled = on);
+    ['btn-verify'].forEach(id => document.getElementById(id).disabled = on);
+    ['btn-stop','hdr-stop'].forEach(id => document.getElementById(id).disabled = !on);
+    const labels = { download: 'downloading…', copy: 'copying…', verify: 'verifying…', sync: 'syncing…' };
+    const status = document.getElementById('footer-status');
+    status.textContent = on ? (labels[script] || 'running…') : 'idle';
+    status.style.color = on ? '#666' : '#3a3a3a';
   }
 
   // ── Run / Stop ────────────────────────────────
@@ -302,16 +459,18 @@
     connectStream();
   }
 
-  async function doStop() {
-    await api('/api/stop', { method:'POST' });
-  }
+  async function doStop() { await api('/api/stop', { method:'POST' }); }
 
   function connectStream() {
     if (es) es.close();
     es = new EventSource('/stream');
     es.onmessage = e => {
       const msg = JSON.parse(e.data);
-      if (msg.t === 'log') appendLog(msg.text);
+      if (msg.t === 'log') {
+        appendLog(msg.text);
+        if (!document.getElementById('page-act').classList.contains('active'))
+          document.getElementById('act-dot').classList.add('visible');
+      }
       if (msg.t === 'done') {
         setRunning(false, null);
         loadQueue();
@@ -324,40 +483,89 @@
   // ── Queue ─────────────────────────────────────
   async function loadQueue() {
     const data = await api('/api/watchlist');
+    lastInProgress = data.in_progress || [];
+    renderHero(lastInProgress);
+    renderList(data);
+  }
+
+  function toggleHeroExpand() {
+    if (!lastInProgress.length) return;
+    heroExpanded = !heroExpanded;
+    renderHero(lastInProgress);
+  }
+
+  function renderHero(inProgress) {
+    const hero = document.getElementById('hero');
+    if (inProgress.length > 0) {
+      hero.classList.add('live');
+      const canExpand = inProgress.length > 1;
+      const chevron = canExpand
+        ? `<span class="hero-chevron${heroExpanded ? ' open' : ''}">▾</span>` : '';
+      let expanded = '';
+      if (heroExpanded && canExpand) {
+        expanded = `<div class="hero-expanded">${
+          inProgress.map((it, i) =>
+            `<div class="hero-exp-item${i===0?' primary':''}">${i===0?'→ ':''}${esc(it.entry)}</div>`
+          ).join('')
+        }</div>`;
+      }
+      hero.innerHTML = `
+        <div class="hero-header">
+          <div class="hero-label"><span class="hero-live-dot"></span>Now downloading</div>
+          ${chevron}
+        </div>
+        <div class="hero-title" title="${esc(inProgress[0].entry)}">${esc(inProgress[0].entry)}</div>
+        <div class="hero-subtitle">in progress · ${inProgress.length} item${inProgress.length>1?'s':''}</div>
+        ${expanded}`;
+    } else {
+      heroExpanded = false;
+      hero.classList.remove('live');
+      hero.innerHTML = `
+        <div class="hero-header">
+          <div class="hero-label">Now downloading</div>
+        </div>
+        <div class="hero-empty">Nothing downloading.</div>`;
+    }
+  }
+
+  function renderList(data) {
     const el = document.getElementById('queue-list');
     el.innerHTML = '';
     const groups = [
-      { key:'in_progress', label:'Downloading',  dot:'dot-progress',   meta:true  },
-      { key:'not_started', label:'Pending',       dot:'dot-pending',    meta:false },
-      { key:'completed',   label:'Downloaded',    dot:'dot-unverified', meta:true  },
-      { key:'failed',      label:'Failed',        dot:'dot-failed',     meta:false },
+      { key:'not_started', label:'Pending',    cls:'muted',   meta:false },
+      { key:'completed',   label:'Downloaded', cls:'success', meta:true  },
+      { key:'failed',      label:'Failed',     cls:'failed',  meta:false },
     ];
     let any = false;
     for (const g of groups) {
       const items = data[g.key] || [];
       if (!items.length) continue;
       any = true;
-      const hdr = document.createElement('div');
-      hdr.className = 'group-header';
-      hdr.innerHTML = `${g.label}<span class="group-count">${items.length}</span>`;
-      el.appendChild(hdr);
-      items.forEach(item => el.appendChild(makeItem(item, g.dot, g.meta)));
+      const sep = document.createElement('div');
+      sep.className = 'group-sep';
+      sep.innerHTML = `<span class="group-sep-line"></span>
+        <span class="group-sep-label">${g.label} ${items.length}</span>
+        <span class="group-sep-line"></span>`;
+      el.appendChild(sep);
+      items.forEach(item => el.appendChild(makeItem(item, g.cls, g.meta)));
     }
     if (!any) el.innerHTML = '<div class="q-empty">Nothing queued.</div>';
   }
 
-  function makeItem(item, dotCls, showMeta) {
+  function makeItem(item, labelCls, showMeta) {
     const div = document.createElement('div');
     div.className = 'q-item';
-    div.innerHTML = `<span class="q-dot ${dotCls}"></span>
-      <span class="q-label" title="${esc(item.entry)}">${esc(item.entry)}</span>
+    const reason = labelCls === 'failed' && item.fail_reason ? item.fail_reason : '';
+    div.innerHTML = `
+      <div class="q-info">
+        <span class="q-label ${labelCls}" title="${esc(item.entry)}">${esc(item.entry)}</span>
+        ${reason ? `<span class="q-reason">${esc(reason)}</span>` : ''}
+      </div>
       ${showMeta && item.tracks > 0 ? `<span class="q-meta">${item.tracks} trk</span>` : ''}`;
-    if (item.status !== 'in_progress') {
-      const btn = document.createElement('button');
-      btn.className = 'q-del'; btn.textContent = '×'; btn.dataset.entry = item.entry;
-      btn.addEventListener('click', function(){ deleteEntry(this.dataset.entry, div); });
-      div.appendChild(btn);
-    }
+    const btn = document.createElement('button');
+    btn.className = 'q-del'; btn.textContent = '×'; btn.dataset.entry = item.entry;
+    btn.addEventListener('click', function(){ deleteEntry(this.dataset.entry, div); });
+    div.appendChild(btn);
     return div;
   }
 
@@ -367,15 +575,33 @@
     const entry = inp.value.trim();
     if (!entry) return;
     const r = await api('/api/watchlist', { method:'POST', body: JSON.stringify({entry}) });
-    if (r.duplicate) { inp.style.borderColor='var(--amber)'; setTimeout(()=>inp.style.borderColor='',1200); return; }
+    if (r.duplicate) {
+      inp.style.borderBottomColor = 'var(--amber)';
+      setTimeout(()=>inp.style.borderBottomColor='', 1200);
+      return;
+    }
     inp.value = '';
     loadQueue();
   }
 
   async function deleteEntry(entry, row) {
-    row.style.opacity = '.4';
+    row.style.opacity = '.3';
     await api('/api/watchlist/delete', { method:'POST', body: JSON.stringify({entry}) });
     loadQueue();
+  }
+
+  // ── Log from file ─────────────────────────────
+  async function loadRecentLog() {
+    if (es) return;
+    const logs = await api('/api/logs');
+    if (!logs || !logs.length) return;
+    const text = await fetch(`/api/logs/${encodeURIComponent(logs[0].name)}`).then(r => r.text());
+    if (!text.trim()) return;
+    const log = document.getElementById('log');
+    log.innerHTML = '';
+    text.split('\n').forEach(line => {
+      if (line && !line.startsWith('#')) appendLog(line);
+    });
   }
 
   // ── Log ───────────────────────────────────────
@@ -400,26 +626,105 @@
     log.scrollTop = log.scrollHeight;
   }
 
-  // ── Library ───────────────────────────────────
+  // ── Library + vertical blur ────────────────────
+  let expandedAlbumRow = null;
+
+  function msToMmSs(ms) {
+    const s = Math.round(ms / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+
+  async function openAlbum(row, album) {
+    if (expandedAlbumRow === row) {
+      const panel = row.nextElementSibling;
+      if (panel && panel.classList.contains('alb-tracks')) panel.remove();
+      row.classList.remove('alb-open');
+      expandedAlbumRow = null;
+      updateLibBlur();
+      return;
+    }
+    if (expandedAlbumRow) {
+      const prev = expandedAlbumRow.nextElementSibling;
+      if (prev && prev.classList.contains('alb-tracks')) prev.remove();
+      expandedAlbumRow.classList.remove('alb-open');
+    }
+    expandedAlbumRow = row;
+    row.classList.add('alb-open');
+
+    const data = await api(`/api/tracklist?folder=${encodeURIComponent(album.path)}`);
+    if (data.error || !data.tracks) { expandedAlbumRow = null; row.classList.remove('alb-open'); return; }
+
+    const panel = document.createElement('div');
+    panel.className = 'alb-tracks';
+    panel.innerHTML = data.tracks.length
+      ? data.tracks.map(t => {
+          const num = t.track ? String(parseInt(t.track)).padStart(2, '0') : '—';
+          const dur = t.duration_ms ? msToMmSs(t.duration_ms) : '';
+          return `<div class="trk-item">
+            <span class="trk-num">${esc(num)}</span>
+            <span class="trk-title">${esc(t.title)}</span>
+            ${dur ? `<span class="trk-dur">${esc(dur)}</span>` : ''}
+          </div>`;
+        }).join('')
+      : '<div class="trk-item"><span class="trk-title" style="color:var(--muted)">No audio files found</span></div>';
+    row.after(panel);
+    updateLibBlur();
+  }
+
   async function loadLibrary() {
     const { albums, source } = await api('/api/library');
     document.getElementById('lib-source').textContent = source === 'device' ? 'Device' : 'Staging';
-    document.getElementById('lib-count').textContent = `${albums.length} album${albums.length!==1?'s':''}`;
-    const grid = document.getElementById('lib-grid');
-    grid.innerHTML = '';
+    document.getElementById('lib-count').textContent = `${albums.length}`;
+    const list = document.getElementById('lib-list');
+    list.innerHTML = '';
+    expandedAlbumRow = null;
     albums.forEach(a => {
-      const card = document.createElement('div');
-      card.className = 'alb'; card.title = a.name;
-      card.innerHTML = `<div class="alb-artist">${esc(a.artist||'—')}</div>
-        <div class="alb-name">${esc(a.album)}</div>
-        <div class="alb-count">${a.tracks} track${a.tracks!==1?'s':''}</div>`;
-      grid.appendChild(card);
+      const row = document.createElement('div');
+      row.className = 'alb';
+      row.addEventListener('click', () => openAlbum(row, a));
+
+      const img = document.createElement('img');
+      img.className = 'alb-art';
+      img.src = `/api/artwork?folder=${encodeURIComponent(a.name)}&artist=${encodeURIComponent(a.artist||'')}&album=${encodeURIComponent(a.album)}`;
+      img.onerror = function() {
+        const ph = document.createElement('div'); ph.className = 'alb-art-ph';
+        this.replaceWith(ph);
+      };
+      row.appendChild(img);
+
+      const info = document.createElement('div'); info.className = 'alb-info';
+      info.innerHTML = `<div class="alb-artist">${esc(a.artist||'—')}</div>
+        <div class="alb-name">${esc(a.album)}</div>`;
+      row.appendChild(info);
+
+      const count = document.createElement('div'); count.className = 'alb-count';
+      count.textContent = `${a.tracks} trk`;
+      row.appendChild(count);
+
+      list.appendChild(row);
+    });
+    updateLibBlur();
+  }
+
+  function updateLibBlur() {
+    const list = document.getElementById('lib-list');
+    const items = list.querySelectorAll('.alb');
+    const listRect = list.getBoundingClientRect();
+    const focusBottom = listRect.top + 200;
+    items.forEach(el => {
+      const itemTop = el.getBoundingClientRect().top;
+      const excess = itemTop - focusBottom;
+      const blurPx = excess > 0 ? Math.min(14, excess / 45) : 0;
+      const opacity = Math.max(0.15, 1 - blurPx / 12);
+      el.style.filter  = blurPx > 0.4 ? `blur(${blurPx.toFixed(1)}px)` : '';
+      el.style.opacity = opacity < 0.98 ? opacity.toFixed(2) : '';
     });
   }
 
   // ── Init ──────────────────────────────────────
   pollStatus();
   loadQueue();
+  loadRecentLog();
   setInterval(pollStatus, 5000);
 </script>
 </body>
