@@ -167,6 +167,11 @@
       font-family: var(--mono);
     }
     .q-meta { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+    .q-device {
+      font-size: 7px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--green); border: 1px solid var(--green); padding: 2px 5px;
+      flex-shrink: 0; line-height: 1.4;
+    }
     .q-del {
       opacity: 0; background: none; border: none; color: var(--muted);
       font-size: 16px; line-height: 1; padding: 1px 4px; border-radius: 3px; cursor: pointer;
@@ -580,7 +585,8 @@
         <span class="q-label ${labelCls}" title="${esc(item.entry)}">${esc(item.entry)}</span>
         ${reason ? `<span class="q-reason">${esc(reason)}</span>` : ''}
       </div>
-      ${showMeta && item.tracks > 0 ? `<span class="q-meta">${item.tracks} trk</span>` : ''}`;
+      ${showMeta && item.tracks > 0 ? `<span class="q-meta">${item.tracks} trk</span>` : ''}
+      ${item.on_device ? `<span class="q-device">on device</span>` : ''}`;
     const btn = document.createElement('button');
     btn.className = 'q-del'; btn.textContent = '×'; btn.dataset.entry = item.entry;
     btn.addEventListener('click', function(){ deleteEntry(this.dataset.entry, div); });
@@ -656,6 +662,7 @@
   }
 
   async function openAlbum(row, album) {
+    if (row._loading) return;
     if (expandedAlbumRow === row) {
       const panel = row.nextElementSibling;
       if (panel && panel.classList.contains('alb-tracks')) panel.remove();
@@ -671,11 +678,16 @@
     }
     expandedAlbumRow = row;
     row.classList.add('alb-open');
+    row._loading = true;
 
     const data = await api(`/api/tracklist?folder=${encodeURIComponent(album.path)}`);
-    // Another album was tapped while this fetch was in flight — bail
+    row._loading = false;
     if (expandedAlbumRow !== row) return;
     if (data.error || !data.tracks) { expandedAlbumRow = null; row.classList.remove('alb-open'); return; }
+
+    // Remove any stale panel before inserting (defensive)
+    const stale = row.nextElementSibling;
+    if (stale && stale.classList.contains('alb-tracks')) stale.remove();
 
     const panel = document.createElement('div');
     panel.className = 'alb-tracks';
