@@ -57,6 +57,49 @@ if artist and album:
 PYEOF
 }
 
+# Flatten CD/disc subdirs and delete variant subdirs (clean, m4a, etc.)
+python3 - "$STAGING" <<'PYEOF'
+import re, shutil, sys
+from pathlib import Path
+
+AUDIO_EXTS = {'.mp3', '.flac', '.opus', '.ogg', '.m4a'}
+CD_PATTERN = re.compile(r'^(cd|disc|disk)\s*\d+$', re.IGNORECASE)
+
+def audio_files(d):
+    return [f for f in Path(d).iterdir() if f.is_file() and f.suffix.lower() in AUDIO_EXTS]
+
+for album_dir in sorted(Path(sys.argv[1]).iterdir()):
+    if not album_dir.is_dir() or album_dir.name.startswith('.'):
+        continue
+    subdirs = [d for d in album_dir.iterdir() if d.is_dir()]
+    if not subdirs:
+        continue
+    root_audio = audio_files(album_dir)
+
+    # Phase A: flatten CD/disc subdirs when root has no audio
+    cd_subdirs = [d for d in subdirs if CD_PATTERN.match(d.name)]
+    if cd_subdirs and not root_audio:
+        if any(album_dir.glob('*.incomplete')):
+            continue
+        print(f"  FLATTEN CDs: {album_dir.name}")
+        for cd_dir in sorted(cd_subdirs):
+            for f in sorted(cd_dir.iterdir()):
+                if f.is_file() and f.suffix.lower() in AUDIO_EXTS:
+                    dest = album_dir / f.name
+                    if dest.exists():
+                        dest = album_dir / f"{cd_dir.name} - {f.name}"
+                    f.rename(dest)
+            shutil.rmtree(str(cd_dir), ignore_errors=True)
+        root_audio = audio_files(album_dir)
+
+    # Phase B: delete variant subdirs when root already has audio
+    if root_audio:
+        for sub in [d for d in album_dir.iterdir() if d.is_dir()]:
+            if audio_files(sub):
+                print(f"  DELETE variant: {album_dir.name}/{sub.name}")
+                shutil.rmtree(str(sub))
+PYEOF
+
 shopt -s nullglob
 for dir in "$STAGING"/*/; do
   [[ -d "$dir" ]] || continue

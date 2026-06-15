@@ -7,6 +7,12 @@ set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 load_config
 
+# Run prep first so folders are renamed from ID3 tags before we try to match them
+echo "==> Running prep on staging"
+for _prep_dir in "$STAGING" "$STAGING/tmp"; do
+  [[ -d "$_prep_dir" ]] && bash "$SCRIPT_DIR/prep.sh" "$_prep_dir"
+done
+
 # Collect completed entries where verified is empty or 'unverified'
 TARGETS=$(python3 - "$WATCHLIST" <<'PYEOF'
 import csv, sys
@@ -54,9 +60,15 @@ while IFS= read -r entry; do
   sleep 1
 
   if [[ -z "$expected" ]]; then
-    echo "    MusicBrainz: not found — leaving as unverified"
-    csv_set "$entry" "verified=unverified" "tmp_path=$folder"
-    (( skipped++ )) || true
+    if [[ "$actual" -ge 5 ]]; then
+      echo "    MusicBrainz: not found — accepting ($actual tracks)"
+      csv_set "$entry" "status=completed" "verified=verified" "tmp_path=$folder"
+      (( ok++ )) || true
+    else
+      echo "    MusicBrainz: not found — too few tracks ($actual), leaving unverified"
+      csv_set "$entry" "verified=unverified" "tmp_path=$folder"
+      (( skipped++ )) || true
+    fi
     continue
   fi
 

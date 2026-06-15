@@ -9,93 +9,194 @@ Shared work tracking for all agents. Update status inline as work progresses.
 The internal codename is `slsk-auto`. The product name is **NO DOWNLOADS REFUSED** — it's
 already in the README, it's already the title of this file, it should be on the screen.
 
-The current aesthetic (warm cream, rounded card, soft blur, score watermark) is lovely but
-wrong for what this is. This app should feel like a loading dock. Brutalist. Dark. High
-contrast. The kind of UI that makes you feel like you are doing something slightly illegal,
-efficiently, with zero apology.
+Direction: **light emo techno-brutalist.** Reference: brutalistwebsites.com.
+White/near-white ground. Electric blue as the single weapon. Massive black type. Hard edges.
+Raw structure. No softness, no rounding, no shadow — but not dark mode. The emotion lives
+in the typography and the one accent color, not in darkness.
+
+The current cream (#e8e4da) is close but too warm and too editorial. The card, the rounded
+corners, the box-shadow — all of that has to go. The score watermark stays if it reads on
+light, gets cut if it doesn't.
 
 ### [product] Surface the real name: slsk-auto → NO DOWNLOADS REFUSED
 
 - [x] Update `<title>` in `templates/index.html`: `slsk-auto` → `NO DOWNLOADS REFUSED`
 - [x] Update `.logo` wordmark text in topbar: `slsk-auto` → `NO DOWNLOADS REFUSED`
-      (it can be small-capped, abbreviated as `NDR` in tight layouts if needed — decide in ux)
+      (abbreviated as `NDR` in tight layouts — decide in ux execution)
 - [x] Update `CLAUDE.md` title line to lead with `NO DOWNLOADS REFUSED` — already done
 - [ ] Add `<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">` to `<head>`
 
-### [ux] Brutalist dark redesign — Phase 1: Foundation
+### [ux] Light emo techno-brutalist redesign — Phase 1: Foundation
 
 Full visual direction change. Felix executes. This is the brief.
 
-**Color system — kill the cream:**
-- [ ] `--bg: #080808` — near black, not pure black
-- [ ] `--card: #101010` — one step up, barely perceptible
-- [ ] `--border: #222222`
-- [ ] `--text: #f0f0f0` — off-white, not blinding
-- [ ] `--muted: #555555`
-- [ ] `--red: #ff2020` — electric. The only accent with permission to scream.
-- [ ] `--green: #00e060`, `--amber: #ffaa00` — signal colors stay, electric versions
-- [ ] Footer and body are one dark register — no separate footer bg color
+**Color system — cool the ground, add one electric:**
+- [ ] `--bg: #f2f2f2` — neutral light grey, cooler than the current warm cream
+- [ ] `--card: #f2f2f2` — card and bg are the same. No floating card. One surface.
+- [ ] `--border: #000000` — black borders. Hard lines, full contrast.
+- [ ] `--text: #0a0a0a` — near black
+- [ ] `--muted: #888888`
+- [ ] `--blue: #0000ff` — raw electric blue. This is the accent. The only color.
+      Current `--blue: #1c3d8a` is a navy, a corporate color. Kill it. Go full signal.
+- [ ] `--green`, `--amber`, `--red` stay for status signals but are subordinate to blue
+- [ ] Footer: `background: #0a0a0a`, `color: #f2f2f2` — the one dark surface, inverted,
+      acts as a base plate. Contrast against the light body above.
 
-**Shape language — no softness:**
-- [ ] `.card` `border-radius: 16px → 0`. No floating card. Full bleed.
-- [ ] `.hdr-btn` `border-radius: 4px → 0`
+**Shape language — zero softness:**
+- [ ] `.card` `border-radius: 16px → 0`. The card disappears — bg and card are the same color.
+- [ ] `.hdr-btn` `border-radius: 4px → 0`. Rectangular buttons with hard black borders.
 - [ ] `.footer-btn` `border-radius: 3px → 0`
-- [ ] `.alb-art` `border-radius: 3px → 0`. Album art is a rectangle. Honor it.
-- [ ] Kill `box-shadow` on `.card`. Structure via color + border, not shadow.
+- [ ] `.alb-art` `border-radius: 3px → 0`. Rectangles.
+- [ ] Kill `box-shadow` on `.card`. Structure is black lines, not shadows.
+- [ ] Add `border: 1px solid var(--border)` to buttons — the outline IS the button.
 
-**Typography — weight contrast:**
-- [ ] `.logo`: `font-size: 11px`, `font-weight: 900`, `letter-spacing: 0.15em`,
-      `text-transform: uppercase` — the full name or `NDR` if space is tight
-- [ ] `.hero-title`: `font-size: 52px`, `font-weight: 900`, `letter-spacing: -0.05em`
-      — when something is downloading, you feel it
-- [ ] `.lib-count`: `font-weight: 900`, `font-size: 32px`
-- [ ] Group separator labels: `letter-spacing: 0.22em`, `font-size: 8px` — stencil energy
-- [ ] Tab labels: `letter-spacing: 0.12em`
+**Typography — this is where the brutalism lives:**
+- [ ] `.logo` / wordmark: `font-weight: 900`, `font-size: 11px`, `letter-spacing: 0.12em`,
+      `text-transform: uppercase` — `NO DOWNLOADS REFUSED` or `NDR` if it won't fit one line
+- [ ] `.hero-title`: `font-size: 52px`, `font-weight: 900`, `letter-spacing: -0.04em`,
+      `line-height: 0.95` — this is the moment. When something's downloading it's all caps
+      huge black type. Think concert poster.
+- [ ] `.lib-count`: `font-weight: 900`, `font-size: 36px`, `letter-spacing: -0.04em`
+- [ ] Group separator labels: `font-size: 8px`, `font-weight: 700`, `letter-spacing: 0.25em`
+      — pure stencil. They label sections like a manifest.
+- [ ] Tab labels: `font-weight: 700`, `letter-spacing: 0.1em`
+- [ ] Active tab indicator: `border-bottom: 2px solid var(--blue)` — the only blue on the tab bar
 
-**Texture — commit or cut:**
-- [ ] Remove `.bg-score` / `score.jpg` — ghost staff-lines on black = invisible = pointless.
-      If texture is wanted later, do it properly: CSS `noise` or SVG grain on `body::before`.
+**Texture — reassess on light:**
+- [ ] The score watermark (`bg-score`) was designed for cream with `mix-blend-mode: multiply`.
+      Test it on `#f2f2f2` — if it still reads, keep it at `opacity: 0.05`. If not, cut it.
 
-**Explicit structure via borders:**
-- [ ] `border-top: 1px solid var(--border)` on tab row
-- [ ] `border-bottom: 1px solid #1a1a1a` between `.q-item` rows
-- [ ] Footer `border-top: 1px solid var(--border)` — explicit, not implied
+**Explicit structure via black borders:**
+- [ ] `border-top: 1px solid var(--border)` on the tab row — divide the topbar from the tabs
+- [ ] `border-bottom: 1px solid #e0e0e0` between `.q-item` rows (light separator, not full black)
+- [ ] `border-top: 1px solid #333` on footer — explicit transition to dark base plate
 
-### [ux] Brutalist dark redesign — Phase 2: Hero and Active State
+### [ux] Light emo techno-brutalist — Phase 2: Hero and Active State
 
-The hero is where the most potential is. A download in progress should look like a concert
-screen.
+The hero is where the brutalism needs to land hardest.
 
-- [ ] Hero when **live**: `background: var(--red)` — entire hero block goes red, text
-      inverts to white. Unmissable. No subtlety.
-- [ ] Drop `hero-glow` keyframe animation entirely — replace with red border opacity pulse
-- [ ] `hero-live-dot`: `8px × 8px` — it reads on dark, it disappears at 6px on cream
-- [ ] Hero when idle: `background: transparent`, `border: 1px solid var(--border)`
-- [ ] When live: `.logo` wordmark also pulses to red — full brand moment
+- [ ] Hero when **live**: `background: var(--blue)` — entire hero block goes electric blue,
+      text goes white. `color: #fff`. No subtlety. This is the concert screen moment.
+- [ ] Drop `hero-glow` keyframe entirely.
+- [ ] Replace with: when live, a `2px solid var(--blue)` border around the hero block.
+      Blue fill + blue border = the thing that's running owns the screen.
+- [ ] `hero-live-dot`: `8px × 8px`, `background: #fff` when inside the blue hero
+- [ ] Hero label "Now downloading": `font-weight: 900`, `font-size: 9px`, `letter-spacing: 0.2em`
+- [ ] Hero idle state: `background: transparent`, `border: 1px solid var(--border)` — quiet grid line
+- [ ] When live: `.logo` wordmark color also snaps to `var(--blue)` — the whole topbar knows
 
-### [ux] Brutalist dark redesign — Phase 3: Activity log
+### [ux] Light emo techno-brutalist — Phase 3: Activity log
 
-The Activity tab is a terminal. Make it look like one.
+The log doesn't need to be a dark terminal anymore. It can be a light-on-light manifest.
 
-- [ ] `#log` background: `#000000` — true black. The one place for pure black.
-- [ ] Log default text: `#cccccc`, `font-size: 12px`, `line-height: 1.7`
-- [ ] While running: blinking `▋` cursor appended to last log line
-- [ ] Idle empty state: `$` prompt style instead of italic "Run download…" copy
+- [ ] `#log` background: `#e8e8e8` — slightly darker than body, defines the zone
+- [ ] Log text: `#0a0a0a`, `font-size: 11.5px`, `line-height: 1.8`
+- [ ] Add a left `border-left: 3px solid var(--blue)` to the log container — editorial margin
+- [ ] Classified lines: `ok` → blue, `err` → red, `warn` → amber, `done` → blue bold
+- [ ] While running: blinking `▋` cursor appended to last log line, color `var(--blue)`
+- [ ] Idle empty state: `$` prompt style in `--muted` instead of italic copy
 
-### [ux] Brutalist dark redesign — Phase 4: Library
+### [ux] Light emo techno-brutalist — Phase 4: Library
 
-- [ ] Reduce max blur `10px → 4px` — dark bg + high blur = smear artifacts
-- [ ] `.alb-art-ph` placeholder: add centered `◼` glyph in `--muted` — explicit, not broken
-- [ ] `.alb-artist` label: `letter-spacing: 0.15em` — it's a stencil, commit to it
+- [ ] Library blur: reduce max `10px → 5px`. On light this smears less but still needs tuning.
+- [ ] `.alb-art-ph` placeholder: solid `var(--border)` rectangle + centered `◼` in `#888`
+- [ ] `.alb-artist` label: `letter-spacing: 0.15em` — stencil caps, all the way
+- [ ] Hover on album row: `background: var(--blue)`, text inverts to white. Aggressive. Fast.
+      Not a gentle bg tint — full blue takeover on hover. `transition: 0.08s`.
 
 ### [ux] Favicon / identity mark
 
-- [ ] Create `static/favicon.svg`: white `H` on `#080808` 16×16 square
+- [ ] Create `static/favicon.svg`: black `NDR` on white 32×32 — or a black square with
+      white `↓` arrow. Decide: wordmark vs glyph.
 - [ ] Wire it up in `<head>` of `index.html`
 
 ---
 
 ## In Progress
+
+### [backend] In Rainbows — bad partial download marked verified
+
+`In Rainbows (2007) — Radiohead` is in the CSV as `completed/verified` but is actually a
+corrupt 2-track partial download. Evidence:
+
+- Folder name: `In Rainbows (2007) [mp3]` — junk `[mp3]` suffix never stripped by `prep.sh`
+- Only 2 tracks on device (should be 10)
+- `fail_reason` in CSV contains a .NET crash stacktrace — the reconciler recovered it after
+  a sldl crash and incorrectly promoted it to `completed/verified`
+- No artist tag (`_` shown in Library)
+
+Immediate fix (manual):
+- [ ] Reset CSV entry to `not_started`, clear `tmp_path` and `fail_reason`
+- [ ] Delete the bad folder from staging: `In Rainbows (2007) [mp3]`
+- [ ] Delete from device and re-download clean
+
+Systemic fix (Bastian):
+- [ ] The reconciler should not mark an entry `verified` if `fail_reason` is non-empty
+- [ ] `prep.sh` should strip `[mp3]` / `[FLAC]` / `[320]` bracket tags from folder names —
+      these are common sldl artifacts and they pollute the library
+- [ ] Verify step should catch 2-track vs 10-track mismatch — if it passed verify, the
+      MusicBrainz track count lookup may have failed silently and defaulted to pass
+
+### [backend] "Folder not found — skipping" for completed entries
+
+Several albums marked `completed` in the CSV are being skipped during the Phase 0 reconciler
+with "Folder not found — skipping". Observed for:
+
+- Floor Filler II — Fierce Ruling Diva
+- Yr Body is Nothing (2015) — Boy Harsher
+- Lesser Man EP — Boy Harsher
+- channel ORANGE — Frank Ocean
+
+These show as DOWNLOADED in the UI, so the CSV status is `completed`, but `find_folder`
+can't locate their staging folders. Likely causes:
+
+1. The folders were moved, renamed, or deleted from staging since they were downloaded
+2. `tmp_path` in the CSV is stale/wrong and `find_folder` fallback is also failing
+3. Folder name on disk doesn't tokenize-match to the entry string (e.g. "channel ORANGE"
+   vs "Frank Ocean - channel ORANGE" or similar casing/punctuation mismatch)
+
+- [x] Investigated all four. Root causes vary:
+      - **Floor Filler II**, **channel ORANGE**: not in staging under any name. Folders
+        genuinely gone (deleted or never succeeded). Reset to `not_started`.
+      - **Yr Body is Nothing**: not in staging under any variant. Reset to `not_started`.
+      - **Lesser Man EP**: stale `tmp_path` (old folder deleted). Actual download landed as
+        `Boy Harsher - Lesser Man (extended version)` (9 tracks). `find_folder` correctly
+        rejected the match — "ep" is not a token in "extended version". Fixed `tmp_path` in
+        CSV to point to the extended version folder; set `verified=unverified` so verify.sh
+        will pick it up. Not a `find_folder` bug — the release on disk is a different edition.
+- [x] CSV patched directly. Floor Filler II / Yr Body is Nothing / channel ORANGE queued
+      for re-download. Lesser Man EP wired to the correct staging path.
+
+### [backend] sldl crash — Console.KeyAvailable in non-TTY context
+
+sldl throws an unhandled exception mid-download when it tries to check for a keypress in a
+context where stdin is not a real TTY (i.e. when called from download.sh via Flask):
+
+```
+System.InvalidOperationException: Cannot see if a key has been pressed when either
+application does not have a console or when console input has been redirected from a file.
+  at DownloaderApplication.DownloadAlbum(...) :line 820
+  at DownloaderApplication.MainLoop() :line 510
+```
+
+`--interactive false` is already set in `download.sh` but this crash is still occurring,
+which means that flag doesn't cover every Console.KeyAvailable call in sldl.
+
+- [x] Version is 2.6.0.0. Crash confirmed in logs — happens after EVERY successful download
+      (sldl polls for a "continue?" keypress after finishing, not mid-download). Crash recovery
+      in download.sh catches it, marking albums `unverified`. Net effect: all Flask-triggered
+      downloads bypass inline verify and land in the unverified queue.
+- [x] `--interactive false` IS passed in `sldl_args` with no dropped code path. That flag
+      disables interactive *folder selection* but does NOT suppress the post-download keypress
+      poll in `MainLoop` — two separate call sites in sldl.
+- [x] No `--no-modify-shares` or stdin workaround exists in sldl 2.6.0.0.
+- [x] **Fixed in `download.sh`**: added `--no-browse-folder` to `sldl_args`. This disables
+      `RetrieveFullFolderCancellableAsync`, the specific call site that invokes
+      `Console.KeyAvailable`. Confirmed in live run: sldl now exits 0, `Done — marked
+      unverified/verified` appears instead of `sldl crashed but files recovered`.
+      PTY stdin approach (tried first) did not work — the crash originates inside a bash
+      pipeline subshell, which doesn't propagate PTY characteristics to .NET's console
+      detection. `--no-browse-folder` is the correct targeted fix.
 
 ### [backend] Kill / restart / reload
 Kill hanging processes, restart Flask, reload the UI.
@@ -233,6 +334,18 @@ The Phase 0 Python reconciler is an inline heredoc in `download.sh`. `test_recon
 ### [backend] `mb_track_count` fails when album name includes year — lib.sh
 `mb_track_count "Janet Jackson" "janet. (1993)"` returned no results because MB titles never include the year disambiguation we append. Same bug hits every year-suffixed entry.
 - [x] Strip `(YYYY)` from album before building the MB query (`re.sub` in the Python inline). Verified: janet. → 28 tracks, Damita Jo → 23 tracks.
+
+### [backend] `verify_tracks` rejects deluxe editions — lib.sh
+Symmetric variance check failed BUBBA (17 tracks) vs expected 13 — got queued for re-download.
+- [x] `verify_tracks` now only fails if `actual < expected - variance`. More tracks (deluxe editions) always accepted.
+
+### [backend] Nested/variant subdirs not flattened before verify — prep.sh
+Renaissance has `clean/` and `m4a/` subdirs (variants). In Rainbows has `CD1/`+`CD2/` (disc split, no root tracks). prep.sh skipped these because `read_id3` only looks at root-level MP3s.
+- [x] `prep.sh` runs a Python flatten pass before the ID3 rename loop: CD/disc subdirs with no root audio → merged to root; variant subdirs when root has audio → deleted.
+
+### [backend] Verify skips MB-not-found albums instead of accepting them — verify.sh
+Many albums (especially non-English or obscure) don't appear in MusicBrainz. `verify.sh` was leaving them as `unverified` indefinitely.
+- [x] `verify.sh` now accepts MB-not-found albums with ≥5 tracks as `verified`. Also runs `prep.sh` on staging at start so folder renames happen before lookup.
 
 ### [backend] `find_folder` can't distinguish albums whose title is a subset of the artist name
 `janet.` tokenises to `["janet"]`, which also appears in `"Janet Jackson"` — so any Janet Jackson folder matches regardless of album. `find_folder "Janet Jackson" "janet."` incorrectly returns the Damita Jo folder.

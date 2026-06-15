@@ -96,20 +96,47 @@ strip_year() {
 
 mb_track_count() {
   python3 - "$1" "$2" <<'PYEOF'
-import sys, urllib.request, urllib.parse, json
+import sys, re, urllib.request, urllib.parse, json
+UA = 'slsk-auto/1.0 (github.com/xngxd/slsk-auto)'
+
 artist, album = sys.argv[1], sys.argv[2]
-url = 'https://musicbrainz.org/ws/2/release/?' + urllib.parse.urlencode(
-    {'query': f'artist:"{artist}" AND release:"{album}"', 'fmt': 'json', 'limit': '5'})
-req = urllib.request.Request(url, headers={'User-Agent': 'slsk-auto/1.0 (github.com/xngxd/slsk-auto)'})
-try:
-    with urllib.request.urlopen(req, timeout=10) as r:
-        data = json.load(r)
-except Exception:
-    sys.exit(0)
-releases = data.get('releases', [])
-if not releases:
-    sys.exit(0)
-total = sum(m.get('track-count', 0) for m in releases[0].get('media', []))
+album = re.sub(r'\s*\(\d{4}\)\s*', '', album).strip()  # strip year
+
+def mb_fetch(q, limit=5):
+    url = 'https://musicbrainz.org/ws/2/release/?' + urllib.parse.urlencode(
+        {'query': q, 'fmt': 'json', 'limit': str(limit)})
+    try:
+        with urllib.request.urlopen(
+                urllib.request.Request(url, headers={'User-Agent': UA}), timeout=10) as r:
+            return json.load(r).get('releases', [])
+    except Exception:
+        return []
+
+def track_total(releases):
+    if not releases:
+        return 0
+    return sum(m.get('track-count', 0) for m in releases[0].get('media', []))
+
+def slug(s):
+    """Strip everything except alphanumeric for fuzzy title comparison."""
+    return re.sub(r'[^\w]', '', s, flags=re.ASCII).lower()
+
+# Pass 1: direct query — artistname is accent-folded, handles Beyoncé → Beyonce
+releases = mb_fetch(f'artistname:"{artist}" AND release:"{album}"')
+total = track_total(releases)
+
+# Pass 2: fetch artist's top releases and fuzzy-match by stripping punctuation.
+# Handles cases like watchlist "B-day" matching MB title "B'Day" (both → "bday").
+if not total and artist:
+    album_slug = slug(album)
+    if album_slug:
+        for r in mb_fetch(f'artistname:"{artist}"', limit=20):
+            if slug(r.get('title', '')) == album_slug:
+                t = sum(m.get('track-count', 0) for m in r.get('media', []))
+                if t > 0:
+                    total = t
+                    break
+
 if total > 0:
     print(total)
 PYEOF
@@ -154,9 +181,9 @@ find_folder() {
 }
 
 verify_tracks() {
-  local actual variance diff
+  local actual variance
   actual=$(count_audio "$1")
   variance=$(track_variance "$2")
-  diff=$(( actual > $2 ? actual - $2 : $2 - actual ))
-  (( diff <= variance )) && echo "ok" || echo "mismatch:${actual}vs${2}"
+  # Only fail if too few — more tracks (deluxe edition) is acceptable.
+  (( actual >= $2 - variance )) && echo "ok" || echo "mismatch:${actual}vs${2}"
 }

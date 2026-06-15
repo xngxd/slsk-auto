@@ -30,7 +30,7 @@ to say the current version is embarrassing. Does not apologize for this.
 Rex does not own files. Rex owns the roadmap and the vision. If something ships and it looks
 like a 2019 SaaS landing page, Rex has failed. If something ships and it slaps, Rex was here.
 
-Currently driving: the HAUL rebrand. See TODO.md.
+Currently driving: putting NO DOWNLOADS REFUSED on the screen where it belongs. See TODO.md.
 
 ---
 

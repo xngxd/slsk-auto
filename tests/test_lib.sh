@@ -122,6 +122,12 @@ it "empty folder → mismatch"
 d="$_stg/empty-dir"; mkdir -p "$d"
 assert_eq "$(verify_tracks "$d" 10)" "mismatch:0vs10"
 
+it "more tracks than expected (deluxe edition) → ok"
+assert_eq "$(verify_tracks "$(mk 17 deluxe)" 13)" "ok"
+
+it "well above expected is still ok"
+assert_eq "$(verify_tracks "$(mk 20 many)" 13)" "ok"
+
 # ── find_folder ───────────────────────────────────────────────────────────────
 begin_suite "find_folder"
 

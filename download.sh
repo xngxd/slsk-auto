@@ -218,10 +218,14 @@ while IFS= read -r entry; do
       continue
     else
       echo "    Only $actual tracks — too few to trust, re-downloading"
+      rm -rf "$existing"
     fi
   fi
 
-  csv_set "$entry" "status=in_progress" "verified=" "fail_reason="
+  # Increment attempt counter
+  _cur_attempts=$(csv_get "$entry" attempts 2>/dev/null || echo "0")
+  _new_attempts=$(( ${_cur_attempts:-0} + 1 ))
+  csv_set "$entry" "status=in_progress" "verified=" "fail_reason=" "attempts=$_new_attempts"
 
   # Construct canonical "Artist - Album" search string for sldl
   if [[ -n "$artist" ]]; then
@@ -230,19 +234,41 @@ while IFS= read -r entry; do
     sldl_search="$entry"
   fi
 
+  # Read previously tried users so we don't hit the same source twice
+  _tried_users=$(csv_get "$entry" tried_users 2>/dev/null || echo "")
+  [[ -n "$_tried_users" ]] && echo "    Banning previously tried: $_tried_users"
+
   sldl_args=(
     "$sldl_search"
     --user "$USERNAME" --pass "$PASSWORD"
     --path "$STAGING/tmp" --album
     --pref-format mp3 --pref-min-bitrate 320 --min-bitrate 128
     --interactive false
+    --no-browse-folder
   )
   [[ -n "$min_tracks" ]] && sldl_args+=(--album-track-count "${min_tracks}+")
+  [[ -n "$_tried_users" ]] && sldl_args+=(--banned-users "$_tried_users")
 
   before=$(find "$STAGING/tmp" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort || true)
 
+  _record_tried_users() {
+    local log_file="$1" new_users existing all_tried
+    new_users=$(grep '^User  :' "$log_file" | awk '{print $3}' | sort -u | paste -sd, || true)
+    if [[ -n "$new_users" ]]; then
+      existing=$(csv_get "$entry" tried_users 2>/dev/null || echo "")
+      if [[ -z "$existing" ]]; then
+        all_tried="$new_users"
+      else
+        all_tried=$(printf '%s\n' "$existing" "$new_users" | tr ',' '\n' | sort -u | paste -sd,)
+      fi
+      csv_set "$entry" "tried_users=$all_tried"
+      echo "    Source(s) recorded: $new_users"
+    fi
+  }
+
   _sldl_log=$(mktemp)
   if sldl "${sldl_args[@]}" 2>&1 | tee "$_sldl_log"; then
+    _record_tried_users "$_sldl_log"
     rm -f "$_sldl_log"
     after=$(find "$STAGING/tmp" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort || true)
     new_folder=$(comm -13 <(echo "$before") <(echo "$after") | head -1 || true)
@@ -261,6 +287,7 @@ while IFS= read -r entry; do
       echo "    Done — marked $verified_val"
     fi
   else
+    _record_tried_users "$_sldl_log"
     _fail_reason=$(grep -v '^[[:space:]]*$' "$_sldl_log" \
       | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g;s/\r//g' \
       | tail -1)
